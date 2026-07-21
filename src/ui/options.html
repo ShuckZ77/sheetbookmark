@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bookmark Sheet Sync — Setup</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body class="options">
+    <main>
+      <header class="masthead">
+        <svg class="mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <g class="orbits" stroke="currentColor" stroke-width="2.6">
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" />
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" transform="rotate(60 24 24)" />
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" transform="rotate(120 24 24)" />
+          </g>
+          <circle cx="24" cy="24" r="5.2" fill="currentColor" />
+        </svg>
+        <div>
+          <h1>Bookmark Sheet Sync</h1>
+          <p>
+            Save a bookmark in any browser and read it back in the others. Everything lives in one Google Sheet in
+            your own Drive, with a separate tab for each browser so nothing ever overlaps.
+          </p>
+        </div>
+      </header>
+
+      <!--
+        Only appears when the build has no baked-in client ID — i.e. you are the publisher,
+        not an end user. It doubles as the setup card, since the Firefox redirect URI can
+        only be read at runtime.
+      -->
+      <section class="card glass notice-card hidden" id="unconfigured">
+        <h2>Publisher setup</h2>
+        <p class="hint">
+          This build has no Google OAuth client ID, so Connect is disabled. Create one <strong>Web application</strong>
+          OAuth client, register the redirect URI below, and save the client ID to
+          <code>.keys/client-id.txt</code>, then rebuild. End users never see this card.
+        </p>
+
+        <label for="redirect">Redirect URI for <em id="browser-name">this browser</em></label>
+        <div class="field-row">
+          <input id="redirect" type="text" readonly spellcheck="false" />
+          <button id="copy-redirect" type="button" class="btn-ghost">Copy</button>
+        </div>
+        <p class="hint" id="redirect-hint">
+          Register this on the same OAuth client. Each browser produces a different one, so open this page in every
+          browser you support and add each value.
+        </p>
+      </section>
+
+      <section class="card glass" style="--i: 0" id="connect-card">
+        <h2><span class="step" id="step-connect">1</span> Connect</h2>
+
+        <div id="connected-state" class="connected hidden">
+          <p class="connected-line">
+            <span class="pill ok">Connected</span>
+            <span>This browser writes to the tab <strong id="tab-name">—</strong> in your sheet.</span>
+          </p>
+          <p class="hint">
+            Rename the sheet, its tabs, or move it anywhere in Drive — sync follows the file, not the name.
+          </p>
+          <div class="actions">
+            <button id="open-sheet" type="button" class="btn-ghost">Open sheet ↗</button>
+            <button id="disconnect" type="button" class="btn-link">Disconnect</button>
+          </div>
+        </div>
+
+        <div id="disconnected-state">
+          <p>One click authorizes the extension to create and manage its own bookmark sheet in your Google Drive —
+            nothing else in your Drive is touched. If a sheet from another browser already exists, it is found and
+            reused, never duplicated.</p>
+          <button id="connect" type="button" class="btn-google">
+            <svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z" />
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
+              <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+            </svg>
+            <span id="connect-label">Connect Google Sheets</span>
+          </button>
+
+          <div id="sheet-choices" class="choices hidden">
+            <p class="hint">More than one Bookmark Sync sheet was found in your Drive. Which one should this browser
+              join?</p>
+            <div id="sheet-choice-list" class="actions"></div>
+          </div>
+        </div>
+
+        <p class="status" id="status"></p>
+      </section>
+
+      <section class="card glass" style="--i: 1" id="sync-card">
+        <h2><span class="step" id="step-sync">2</span> Sync</h2>
+
+        <label for="sync-mode">When should bookmarks sync to the sheet?</label>
+        <select id="sync-mode">
+          <option value="instant">Instantly — recommended</option>
+          <option value="15">Every 15 minutes</option>
+          <option value="60">Every hour</option>
+          <option value="480">Every 8 hours</option>
+          <option value="1440">Once a day</option>
+          <option value="manual">Manual only</option>
+        </select>
+        <p class="hint">
+          Saving with the toolbar button always writes immediately. In Manual mode, bookmarks made with
+          Ctrl/Cmd&nbsp;+&nbsp;D wait for the Sync now button — the toolbar icon shows how many are waiting.
+        </p>
+
+        <label class="checkbox">
+          <input id="capture-native" type="checkbox" />
+          <span>Sync bookmarks made the normal way — Ctrl/Cmd&nbsp;+&nbsp;D, or the star icon</span>
+        </label>
+
+        <div class="actions actions-spaced">
+          <button id="sync-now" type="button" class="btn-ghost">Sync now ↑</button>
+          <button id="import-others" type="button" class="btn-ghost">Get bookmarks from other browsers ↓</button>
+        </div>
+        <p class="hint">
+          “Get bookmarks” copies anything your other browsers have saved into a
+          <code>Bookmark Sync</code> folder here. It only ever adds — nothing is deleted or overwritten.
+        </p>
+        <p class="status" id="sync-status"></p>
+      </section>
+
+      <section class="card glass" style="--i: 2" id="install-card">
+        <h2><span class="step" id="step-install">3</span> This install</h2>
+        <label for="profile">Profile label</label>
+        <input id="profile" type="text" placeholder="Work — Chrome" spellcheck="false" />
+        <p class="hint">
+          Names this browser's tab in the sheet and is written into every row it saves. No browser exposes its profile
+          or device name to extensions, so describe this install yourself — e.g. <em>Chrome — MacBook Pro</em>.
+        </p>
+      </section>
+
+      <section class="card glass danger" style="--i: 3">
+        <h2>Reset</h2>
+        <p class="hint">
+          Signs this browser out and clears its local sync record. Your bookmark sheet in Drive is left untouched.
+        </p>
+        <button id="reset" type="button" class="btn-danger">Reset this install</button>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

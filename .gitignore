@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.DS_Store
+
+# The private signing key stays local. The public manifest key and derived id are
+# committed so builds are reproducible and the extension id is stable.
+.keys/extension-key.pem

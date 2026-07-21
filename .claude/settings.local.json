@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --test test/ui.test.mjs)",
+      "Bash(npm test *)",
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:developer.chrome.com)",
+      "WebFetch(domain:support.google.com)",
+      "Bash(node --test test/background.test.mjs)",
+      "Bash(npm run *)",
+      "WebSearch",
+      "Bash(node scripts/build.mjs)"
+    ]
+  }
+}

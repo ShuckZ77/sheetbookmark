@@ -1,0 +1,13 @@
+{
+  "name": "bookmark-sheet-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Save bookmarks from any browser into one Google Sheet, and read them back anywhere.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "zip": "node scripts/build.mjs --zip",
+    "test": "node --test test/*.test.mjs",
+    "clean": "rm -rf dist"
+  }
+}

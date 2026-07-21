@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Bookmark Sheet Sync</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body class="popup">
+    <header class="bar glass">
+      <div class="brand">
+        <svg class="mark" id="mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <g class="orbits" stroke="currentColor" stroke-width="2.6">
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" />
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" transform="rotate(60 24 24)" />
+            <ellipse cx="24" cy="24" rx="20" ry="7.6" transform="rotate(120 24 24)" />
+          </g>
+          <circle cx="24" cy="24" r="5.2" fill="currentColor" />
+        </svg>
+        <div class="brand-text">
+          <div class="brand-title">Bookmark Sheet Sync</div>
+          <div class="brand-sub" id="profile-label">Not set up</div>
+        </div>
+      </div>
+
+      <div class="bar-actions">
+        <button class="btn-icon" id="refresh" title="Refresh from sheet" aria-label="Refresh from sheet">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.7-4" />
+            <path d="M13.9 2.6v3.3h-3.3" />
+          </svg>
+        </button>
+        <button class="btn-icon" id="open-options" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M2.5 5h11M2.5 11h11" />
+            <circle cx="6" cy="5" r="1.7" fill="var(--surface-strong)" />
+            <circle cx="10.5" cy="11" r="1.7" fill="var(--surface-strong)" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="notice glass hidden" id="notice">
+      <p id="notice-text"></p>
+      <button class="btn-primary" id="notice-action"></button>
+    </section>
+
+    <section class="panel glass hidden" id="main">
+      <button class="btn-primary save" id="save-tab">
+        <span id="save-label">Save this tab</span>
+        <span class="save-sub" id="save-sub"></span>
+      </button>
+
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="7" cy="7" r="4.5" />
+          <path d="M10.6 10.6 14 14" />
+        </svg>
+        <input id="search" type="search" placeholder="Search saved bookmarks" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="chips" id="chips"></div>
+
+      <ul class="list" id="list"></ul>
+      <p class="empty hidden" id="empty">Nothing matches.</p>
+    </section>
+
+    <footer class="foot">
+      <span class="pill" id="status-pill">Loading</span>
+      <span id="count"></span>
+      <button class="btn-link" id="open-sheet">Open sheet</button>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
