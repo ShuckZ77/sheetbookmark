@@ -59,4 +59,4 @@ purpose, and is prominent in its user interface.
 ## Contact
 
 <!-- Replace with a real contact address before publishing. -->
-Questions: `iitbhu.rishish@gmail.com`
+Questions: `iitbhu.rishish7@gmail.com`
