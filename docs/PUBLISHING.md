@@ -12,6 +12,25 @@ Companion docs: [TESTING.md](TESTING.md) (try it locally first) · [ANALYTICS.md
 
 ---
 
+## Start here — the order that always applies
+
+Whether it's just you testing locally or a stranger installing from a store, **the extension cannot
+connect until Google knows about it.** This part is unconditional, in this order:
+
+1. **Google Cloud project** → enable **Sheets API** + **Drive API** (Step 2.1–2.2).
+2. **Google Auth Platform** → External audience, single scope `drive.file` (Step 2.3–2.4).
+3. **OAuth client** (Web application) → register the redirect URIs (Step 2.5).
+4. **Bake the client ID** → `npm run build` (Step 2.7).
+
+Only what comes *after* differs:
+
+| | Just you, locally | Real users |
+| --- | --- | --- |
+| OAuth app status | *Testing* is fine — add yourself as a test user | **Publish app → In production** (Step 2.6) |
+| Privacy policy hosted | Not needed yet | **Required** (Step 1) |
+| Store accounts | Not needed | Steps 4–6 |
+| Then | Run the [TESTING.md](TESTING.md) checklist | Submit to stores |
+
 ## Why the order matters
 
 OAuth redirect URIs are derived from extension IDs, and each store assigns its own ID. So the
@@ -33,10 +52,20 @@ is right.
 
 Every store requires a public privacy-policy URL (OAuth token = user data, no exemption).
 
-1. Push this repo to GitHub, enable **Pages** (Settings → Pages → deploy from branch), or paste
-   `docs/PRIVACY.md` into any static host.
-2. Put your real contact email into it first (there's a placeholder).
-3. Keep the URL handy — you'll paste it into three dashboards.
+1. Replace the placeholder contact email in `docs/PRIVACY.md` with a real one.
+2. Push this repo to GitHub. The repo must be **public** (free accounts can't serve Pages from
+   private repos).
+3. Repo → **Settings → Pages** → Source: *Deploy from a branch* → Branch: `main`, Folder: **`/docs`**
+   → Save.
+4. Wait 1–2 minutes (watch the repo's **Actions** tab for the *pages build and deployment* run to
+   go green). GitHub converts each `.md` in `docs/` to a page; `docs/index.md` becomes the site
+   root — without it the root URL 404s even though the sub-pages work.
+5. Your URLs (pattern `https://<username>.github.io/<repo>/…`):
+   - Homepage: `https://<username>.github.io/<repo>/`
+   - **Privacy policy — the one you paste into every store dashboard:**
+     `https://<username>.github.io/<repo>/PRIVACY.html`
+6. Verify both in a private browser window **before** pasting anywhere. If the root 404s but
+   `PRIVACY.html` loads, `docs/index.md` is missing from the deployed branch — push it.
 
 ## Step 2 — Google Cloud OAuth client (20 min)
 
