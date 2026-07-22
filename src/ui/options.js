@@ -1,7 +1,7 @@
 import { api, detectBrowser, detectOs } from '../lib/browser.js';
 import { getRedirectUri } from '../lib/auth.js';
 import { isConfiguredBuild } from '../config.js';
-import { getSettings, setSettings } from '../lib/store.js';
+import { getErrorLog, getSettings, setSettings } from '../lib/store.js';
 
 const API_ORIGINS = ['https://sheets.googleapis.com/*', 'https://www.googleapis.com/*'];
 
@@ -181,6 +181,29 @@ async function openSheet() {
   if (sheetId) api.tabs.create({ url: `https://docs.google.com/spreadsheets/d/${sheetId}` });
 }
 
+/** Everything a bug report needs, nothing the user would mind pasting publicly. */
+async function buildDiagnostics() {
+  const [settings, browser, os, log] = await Promise.all([getSettings(), detectBrowser(), detectOs(), getErrorLog()]);
+  const manifest = api.runtime.getManifest();
+  const recent = log.slice(-8).map((entry) => `- ${entry.at} [${entry.context}] ${entry.message}`);
+  return [
+    `SheetBookmark v${manifest.version} — ${browser} · ${os}`,
+    `connected: ${Boolean(settings.sheetId)} · sync: ${settings.syncMode} · capture ⌘D: ${settings.captureNative} · visit stats: ${settings.visitStats}`,
+    recent.length ? `recent errors:\n${recent.join('\n')}` : 'recent errors: none',
+  ].join('\n');
+}
+
+async function reportIssue() {
+  const body = `**What happened?**\n\n(describe the problem here)\n\n---\n\n\u0060\u0060\u0060\n${await buildDiagnostics()}\n\u0060\u0060\u0060\n`;
+  const url = `https://github.com/ShuckZ77/sheetbookmark/issues/new?title=${encodeURIComponent('[bug] ')}&body=${encodeURIComponent(body)}`;
+  api.tabs.create({ url });
+}
+
+async function copyDiagnostics() {
+  await navigator.clipboard.writeText(await buildDiagnostics());
+  setStatus('support-status', 'Diagnostics copied — paste them anywhere.', 'ok');
+}
+
 async function reset() {
   if (!confirm('Sign this browser out and clear its local sync record? Your sheet in Drive is not touched.')) return;
   await send({ type: 'disconnect' });
@@ -235,6 +258,8 @@ async function init() {
   $('sync-now').onclick = syncNow;
   $('import-others').onclick = importFromSheet;
   $('reset').onclick = reset;
+  $('report-issue').onclick = reportIssue;
+  $('copy-diag').onclick = copyDiagnostics;
   $('capture-native').onchange = (event) => setSettings({ captureNative: event.target.checked });
   $('visit-stats').onchange = async (event) => {
     // The permission prompt must come from this click; declined means the box stays off.

@@ -122,6 +122,22 @@ test('an install that synced before offers to REconnect, not connect', async () 
   assert.equal(globalThis.document.getElementById('connect-label').textContent, 'Reconnect Google Sheets');
 });
 
+test('Copy diagnostics assembles version, environment and settings', async () => {
+  const ctx = installGlobals(page('options.html'), { status: { ok: true, connected: true, tabName: 'T' } });
+  ctx.store.set('syncMode', 'instant');
+
+  await script('options.js');
+  await settle();
+
+  const doc = globalThis.document;
+  assert.equal(typeof doc.getElementById('report-issue').onclick, 'function', 'issue button wired');
+  await doc.getElementById('copy-diag').onclick();
+
+  assert.match(ctx.clipboard, /SheetBookmark v1\.0\.0 — Chrome · macOS/);
+  assert.match(ctx.clipboard, /sync: instant/);
+  assert.match(ctx.clipboard, /recent errors: none/);
+});
+
 test('a toolbar save carries the page description read via scripting', async () => {
   const status = { ok: true, connected: true, needsAuth: false, profile: 'W', sheetId: 'S', queued: 0 };
   const { messages } = installGlobals(page('popup.html'), { status, rows: [] });

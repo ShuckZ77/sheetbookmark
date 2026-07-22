@@ -116,6 +116,7 @@ const stableChrome = {
       return { ok: true };
     },
     openOptionsPage: async () => {},
+    getManifest: () => ({ version: '1.0.0' }),
     getPlatformInfo: async () => ({ os: 'mac' }),
     // no getBrowserInfo → detectBrowser falls through to user-agent sniffing
   },
@@ -161,7 +162,7 @@ export function installGlobals(html, { status = {}, rows = [] } = {}) {
     value: {
       userAgent: 'Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0 Safari/537.36',
       userAgentData: { brands: [{ brand: 'Chromium' }, { brand: 'Google Chrome' }] },
-      clipboard: { writeText: async () => {} },
+      clipboard: { writeText: async (text) => { ctx.clipboard = text; } },
     },
   });
   globalsReady = true;

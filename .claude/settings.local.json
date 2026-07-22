@@ -28,7 +28,10 @@
       "Bash(node -e \"const m=require\\('./src/manifest.json'\\);console.log\\('perms:',m.permissions.join\\(','\\)\\);console.log\\('optional:',m.optional_permissions.join\\(','\\)\\);console.log\\('hosts:',m.host_permissions.join\\(','\\)\\)\")",
       "Bash(xargs -n1 basename)",
       "Bash(node --check src/ui/options.js)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node --check src/lib/store.js)"
     ]
   }
 }

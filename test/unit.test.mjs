@@ -131,6 +131,28 @@ test('every API host the code calls is covered by host_permissions', async () =>
   }
 });
 
+// --- Error journal ----------------------------------------------------------
+
+test('logError scrubs URLs and tokens and caps the journal at 50', async () => {
+  const data = new Map();
+  globalThis.chrome.storage.local = {
+    get: async (key) => (data.has(key) ? { [key]: data.get(key) } : {}),
+    set: async (patch) => Object.entries(patch).forEach(([k, v]) => data.set(k, v)),
+  };
+  const { logError, getErrorLog } = await import('../src/lib/store.js');
+
+  await logError('sync', new Error('failed for https://secret.example/私 with ya29.abc-DEF token'));
+  for (let i = 0; i < 60; i += 1) await logError('loop', `err ${i}`);
+
+  const log = await getErrorLog();
+  assert.equal(log.length, 50, 'journal is capped');
+  assert.equal(log[log.length - 1].message, 'err 59', 'newest entries survive');
+
+  const first = JSON.stringify(log);
+  assert.ok(!first.includes('secret.example'), 'URLs scrubbed');
+  assert.ok(!first.includes('ya29.abc'), 'token-shaped strings scrubbed');
+});
+
 // --- Tab titles -------------------------------------------------------------
 
 test('sanitizeTabTitle strips characters Sheets rejects and caps length', () => {

@@ -5,108 +5,130 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SheetBookmark — Every bookmark, from every browser, in one Google Sheet you own</title>
 <meta name="description" content="Sync bookmarks across Chrome, Firefox, Edge, Brave and Vivaldi into a Google Sheet in your own Drive. A tab per browser, searchable everywhere, no server, no tracking." />
-<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%23059669" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="%23fafaf7"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>' />
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%23047857" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="%23fdfcf9"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>' />
 <style>
+/* Spreadsheet paper: white, faint gridlines, navy ink, blue structure, green ONLY where
+   something is saved or actionable. Deliberately light-committed — paper has one look. */
 :root{
-  color-scheme:light dark;
-  --bg:#f4f7fb; --ink:#0f2542; --ink-soft:#44607f; --ink-faint:#74879d;
-  --surface:#ffffff; --surface-soft:#eef3f9; --stroke:rgba(15,37,66,.1); --stroke-strong:rgba(15,37,66,.18);
-  --accent:#059669; --accent-bright:#10b981; --accent-ink:#fff; --wash:rgba(5,150,105,.1);
-  --navy:#0f2542; --shadow:0 12px 40px rgba(15,37,66,.09);
+  --paper:#fdfcf9; --card:#ffffff;
+  --ink:#1a2d4f; --ink-soft:#51617d; --ink-faint:#8492a8;
+  --blue:#1d4ed8; --blue-soft:#eaf0fd;
+  --green:#047857; --green-bright:#059669; --green-soft:#e8f5ef;
+  --line:rgba(26,45,79,.09); --line-strong:rgba(26,45,79,.18);
+  --grid:rgba(26,45,79,.05);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0a1626; --ink:#f2f5f9; --ink-soft:#a9b6c8; --ink-faint:#6e8095;
-  --surface:#101f33; --surface-soft:#0d1a2c; --stroke:rgba(255,255,255,.1); --stroke-strong:rgba(255,255,255,.2);
-  --accent:#34d399; --accent-bright:#6ee7b7; --accent-ink:#062d1f; --wash:rgba(52,211,153,.12);
-  --navy:#0a1626; --shadow:0 12px 40px rgba(0,0,0,.45);
-}}
 *{box-sizing:border-box;margin:0}
 html{scroll-behavior:smooth}
-body{font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
-.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
-a{color:var(--accent);text-decoration:none}
+body{
+  font:16px/1.68 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);
+  background:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+    var(--paper);
+  background-size:32px 32px,32px 32px,auto;
+}
+.wrap{max-width:1020px;margin:0 auto;padding:0 24px}
+a{color:var(--blue);text-decoration:none}
 a:hover{text-decoration:underline}
+h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
 
-nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--stroke)}
-.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+nav{position:sticky;top:0;z-index:10;background:rgba(253,252,249,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink)}
 .brand:hover{text-decoration:none}
-.brand svg{width:26px;height:26px;color:var(--accent)}
+.brand svg{width:25px;height:25px;color:var(--green)}
 .nav-links{display:flex;align-items:center;gap:22px;font-size:14.5px;font-weight:550}
 .nav-links a{color:var(--ink-soft)}
-.nav-links a:hover{color:var(--accent);text-decoration:none}
-.gh{display:inline-flex;align-items:center;gap:7px;color:var(--ink-soft)}
-.gh svg{width:19px;height:19px;fill:currentColor}
-@media(max-width:640px){.nav-links a:not(.gh){display:none}}
+.nav-links a:hover{color:var(--blue);text-decoration:none}
+.gh{display:inline-flex;align-items:center;gap:7px}
+.gh svg{width:18px;height:18px;fill:currentColor}
+@media(max-width:680px){.nav-links a:not(.gh){display:none}}
 
-.hero{padding:88px 0 64px;text-align:center}
-.hero .mark{width:76px;height:76px;color:var(--accent);margin-bottom:22px}
-h1{font-size:clamp(30px,5.4vw,50px);line-height:1.14;letter-spacing:-.025em;font-weight:750;max-width:20ch;margin:0 auto}
-h1 em{font-style:normal;color:var(--accent)}
-.sub{font-size:clamp(16px,2.2vw,19.5px);color:var(--ink-soft);max-width:56ch;margin:20px auto 34px}
-.cta{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-.btn{display:inline-flex;align-items:center;gap:9px;font-weight:650;font-size:15px;padding:13px 22px;border-radius:12px;border:1px solid transparent}
+.hero{padding:76px 0 40px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+@media(max-width:840px){.hero-grid{grid-template-columns:1fr}}
+h1{font-size:clamp(32px,4.6vw,46px);line-height:1.16}
+h1 .save{color:var(--green);font-style:italic}
+.sub{font-size:17.5px;color:var(--ink-soft);max-width:52ch;margin:18px 0 28px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:650;font-size:15px;padding:12px 21px;border-radius:9px;border:1px solid transparent}
 .btn:hover{text-decoration:none}
-.btn-primary{background:linear-gradient(180deg,var(--accent-bright),var(--accent));color:var(--accent-ink);box-shadow:0 8px 22px var(--wash)}
-.btn-primary:hover{filter:brightness(1.05)}
-.btn-ghost{border-color:var(--stroke-strong);color:var(--ink);background:var(--surface)}
-.btn-ghost:hover{border-color:var(--accent)}
-.btn svg{width:18px;height:18px;fill:currentColor}
-.soon{font-size:13px;color:var(--ink-faint);margin-top:14px}
+.btn-save{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(4,120,87,.22)}
+.btn-save:hover{background:var(--green-bright)}
+.btn-plain{border-color:var(--line-strong);color:var(--ink);background:var(--card)}
+.btn-plain:hover{border-color:var(--blue);color:var(--blue)}
+.btn svg{width:17px;height:17px;fill:currentColor}
+.soon{font-size:13px;color:var(--ink-faint);margin-top:13px}
 
-section{padding:64px 0}
-.kicker{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
-h2{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.02em;margin-bottom:14px}
-.lede{color:var(--ink-soft);max-width:62ch;margin-bottom:38px}
+/* the hero visual IS the product: a mini sheet */
+.mini-sheet{background:var(--card);border:1px solid var(--line-strong);border-radius:10px;box-shadow:0 18px 44px rgba(26,45,79,.1);overflow:hidden;font-size:12.5px}
+.ms-bar{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:650;font-size:12.5px}
+.ms-bar svg{width:15px;height:15px;color:var(--green)}
+.ms-tabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--line);background:var(--paper);font-size:11.5px}
+.ms-tabs span{padding:6px 12px;border-radius:7px 7px 0 0;color:var(--ink-faint)}
+.ms-tabs .on{background:var(--card);color:var(--green);font-weight:650;border:1px solid var(--line);border-bottom-color:var(--card)}
+.mini-sheet table{border-collapse:collapse;width:100%}
+.mini-sheet th{background:var(--blue-soft);color:var(--blue);text-align:left;font-weight:650;padding:7px 11px;border-bottom:1px solid var(--line-strong);border-right:1px solid var(--line);white-space:nowrap}
+.mini-sheet td{padding:7px 11px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;color:var(--ink-soft)}
+.mini-sheet td.t{color:var(--ink);font-weight:550}
+.mini-sheet tr:last-child td{border-bottom:none}
+.row-new td{background:var(--green-soft);color:var(--green);animation:landed 2.4s ease-out}
+.row-new td.t{color:var(--green)}
+@keyframes landed{from{background:#c8ecd9}}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
-.card{background:var(--surface);border:1px solid var(--stroke);border-radius:16px;padding:26px;box-shadow:var(--shadow)}
-.card .ico{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--wash);color:var(--accent);margin-bottom:16px;font-size:20px}
-.card h3{font-size:17px;margin-bottom:8px;letter-spacing:-.01em}
+section{padding:58px 0}
+.kicker{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+h2{font-size:clamp(25px,3.2vw,31px);margin-bottom:12px}
+.lede{color:var(--ink-soft);max-width:60ch;margin-bottom:34px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px}
+.card .ico{width:38px;height:38px;color:var(--blue);margin-bottom:14px}
+.card .ico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:16.5px;margin-bottom:7px;letter-spacing:-.01em}
 .card p{font-size:14.5px;color:var(--ink-soft)}
 
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;counter-reset:step}
-.step{background:var(--surface);border:1px solid var(--stroke);border-radius:16px;padding:26px;position:relative}
-.step::before{counter-increment:step;content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,var(--accent-bright),var(--accent));color:var(--accent-ink);font-weight:750;font-size:15px;margin-bottom:14px}
-.step h3{font-size:16.5px;margin-bottom:7px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;counter-reset:step}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;position:relative}
+.step::before{counter-increment:step;content:counter(step);position:absolute;top:-13px;left:20px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;font-size:14px;font-family:var(--serif)}
+.step h3{font-size:16px;margin:8px 0 6px}
 .step p{font-size:14.5px;color:var(--ink-soft)}
+.step b{color:var(--green)}
 
-.sheet-demo{background:var(--surface);border:1px solid var(--stroke);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
-.sheet-bar{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--stroke);background:var(--surface-soft);font-size:13.5px;font-weight:600}
-.sheet-bar .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-.sheet-tabs{display:flex;gap:2px;padding:0 12px;background:var(--surface-soft);border-bottom:1px solid var(--stroke);font-size:12.5px;overflow-x:auto}
-.sheet-tabs span{padding:8px 14px;border-radius:8px 8px 0 0;color:var(--ink-faint);white-space:nowrap}
-.sheet-tabs .on{background:var(--surface);color:var(--accent);font-weight:650;border:1px solid var(--stroke);border-bottom-color:var(--surface)}
+.sheet-demo{background:var(--card);border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;box-shadow:0 14px 36px rgba(26,45,79,.08)}
 .table-scroll{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:13px;min-width:980px}
-th{background:var(--surface-soft);color:var(--ink-soft);font-weight:650;text-align:left;white-space:nowrap;padding:9px 13px;border-bottom:2px solid var(--stroke-strong);border-right:1px solid var(--stroke)}
-td{padding:9px 13px;border-bottom:1px solid var(--stroke);border-right:1px solid var(--stroke);white-space:nowrap;color:var(--ink-soft)}
-td.t{color:var(--ink);font-weight:550}
-tr:last-child td{border-bottom:none}
-.note{font-size:13.5px;color:var(--ink-faint);margin-top:14px}
+.sheet-demo table{border-collapse:collapse;width:100%;font-size:13px;min-width:980px}
+.sheet-demo th{background:var(--blue-soft);color:var(--blue);font-weight:650;text-align:left;white-space:nowrap;padding:9px 13px;border-bottom:1px solid var(--line-strong);border-right:1px solid var(--line)}
+.sheet-demo td{padding:9px 13px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;color:var(--ink-soft)}
+.sheet-demo td.t{color:var(--ink);font-weight:550}
+.sheet-demo tr:last-child td{border-bottom:none}
+.note{font-size:13.5px;color:var(--ink-faint);margin-top:13px;max-width:74ch}
+.note code{background:var(--blue-soft);color:var(--blue);border-radius:4px;padding:1px 5px;font-size:12px}
 
-.priv{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:8px}
+.priv{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px}
 .priv div{display:flex;gap:11px;align-items:flex-start;font-size:14.5px;color:var(--ink-soft)}
 .priv b{color:var(--ink)}
-.tick{flex:none;width:22px;height:22px;border-radius:50%;background:var(--wash);color:var(--accent);display:grid;place-items:center;font-size:12px;font-weight:800}
+.tick{flex:none;width:21px;height:21px;border-radius:50%;background:var(--green-soft);color:var(--green);display:grid;place-items:center;font-size:12px;font-weight:800}
 
-details{background:var(--surface);border:1px solid var(--stroke);border-radius:13px;padding:16px 20px;margin-bottom:10px}
+details{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 20px;margin-bottom:9px}
 summary{cursor:pointer;font-weight:600;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;gap:12px}
-summary::after{content:"+";color:var(--accent);font-weight:700}
+summary::after{content:"+";color:var(--blue);font-weight:700}
 details[open] summary::after{content:"–"}
 details p{margin-top:10px;font-size:14.5px;color:var(--ink-soft)}
 
-footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;color:var(--ink-faint)}
+footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color:var(--ink-faint);background:var(--card)}
 .foot{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;justify-content:space-between}
 .foot-links{display:flex;flex-wrap:wrap;gap:20px}
 .foot a{color:var(--ink-soft)}
+.foot a:hover{color:var(--blue)}
 </style>
 </head>
 <body>
 
 <nav><div class="wrap nav-inner">
   <a class="brand" href="#">
-    <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="#fafaf7"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="#fdfcf9"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>
     SheetBookmark
   </a>
   <div class="nav-links">
@@ -114,6 +136,7 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
     <a href="#how">How it works</a>
     <a href="#sheet">Your sheet</a>
     <a href="#privacy">Privacy</a>
+    <a href="#faq">FAQ</a>
     <a class="gh" href="https://github.com/ShuckZ77/sheetbookmark" title="Source on GitHub" aria-label="GitHub repository">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       <span>GitHub</span>
@@ -121,18 +144,34 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
   </div>
 </div></nav>
 
-<header class="hero"><div class="wrap">
-  <svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="#fafaf7"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>
-  <h1>Every bookmark, from every browser, in <em>one Google Sheet you own</em></h1>
-  <p class="sub">Star a page in Chrome — it lands in your spreadsheet within seconds. Firefox and Edge write to their own tabs in the same sheet. Search everything from anywhere. No server. No account. No tracking.</p>
-  <div class="cta">
-    <a class="btn btn-primary" href="https://github.com/ShuckZ77/sheetbookmark#readme">Get SheetBookmark</a>
-    <a class="btn btn-ghost" href="https://github.com/ShuckZ77/sheetbookmark">
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-      View source
-    </a>
+<header class="hero"><div class="wrap hero-grid">
+  <div>
+    <h1>Every bookmark, from every browser, in one Google Sheet <span class="save">you own</span></h1>
+    <p class="sub">Star a page in Chrome — it lands in your spreadsheet within seconds. Firefox and Edge write to their own tabs of the same sheet. Search everything, from anywhere. No server. No account. No tracking.</p>
+    <div class="cta">
+      <a class="btn btn-save" href="https://github.com/ShuckZ77/sheetbookmark#readme">Get SheetBookmark</a>
+      <a class="btn btn-plain" href="https://github.com/ShuckZ77/sheetbookmark">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        View source
+      </a>
+    </div>
+    <p class="soon">Chrome · Firefox · Edge · Brave · Vivaldi — store listings coming soon.</p>
   </div>
-  <p class="soon">Chrome · Firefox · Edge · Brave · Vivaldi — store listings coming soon; installable from source today.</p>
+
+  <div class="mini-sheet" role="img" aria-label="A Google Sheet with one tab per browser receiving a new bookmark">
+    <div class="ms-bar">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/></svg>
+      My SheetBookmark Collection
+    </div>
+    <div class="ms-tabs"><span class="on">Chrome — MacBook</span><span>Firefox — Home</span><span>Edge — Office</span></div>
+    <table>
+      <tr><th>title</th><th>reading</th><th>saved</th></tr>
+      <tr class="row-new"><td class="t">MCP documentation</td><td>9 min</td><td>just now</td></tr>
+      <tr><td class="t">The Verge — AI newsletter</td><td>—</td><td>2 h ago</td></tr>
+      <tr><td class="t">Perfect dal tadka</td><td>4 min</td><td>yesterday</td></tr>
+      <tr><td class="t">Bugzilla #1635344</td><td>12 min</td><td>Jul 20</td></tr>
+    </table>
+  </div>
 </div></header>
 
 <section id="features"><div class="wrap">
@@ -140,22 +179,22 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
   <h2>Built for people who live in more than one browser</h2>
   <p class="lede">Browser sync only syncs a browser with itself. SheetBookmark syncs your <em>bookmarking</em> — across engines, machines and profiles — into a file you can open, sort, filter and keep forever.</p>
   <div class="grid">
-    <div class="card"><div class="ico">🗂️</div><h3>A tab per browser</h3><p>Chrome, Firefox and Edge each write to their own tab in the same spreadsheet — nothing ever overlaps or overwrites. Rename tabs or the sheet freely; sync follows the file, not the name.</p></div>
-    <div class="card"><div class="ico">⚡</div><h3>Your cadence</h3><p>Instant by default — a starred page appears in the sheet within seconds. Prefer batches? Every 15 minutes, hourly, daily, or manual-only with a pending-count badge on the icon.</p></div>
-    <div class="card"><div class="ico">🔁</div><h3>Both directions</h3><p>Read and search every browser's bookmarks from the popup. One click pulls what your other browsers saved into this one — additive only, nothing is ever deleted.</p></div>
-    <div class="card"><div class="ico">✍️</div><h3>Rich capture</h3><p>Toolbar saves grab the page description — or the exact text you highlighted — plus site name and reading time. The description column doubles as your notes field.</p></div>
-    <div class="card"><div class="ico">📊</div><h3>Opt-in visit stats</h3><p>Enable it and each save records how often you visited the page and when last — read locally from your browser history, written only into your own sheet.</p></div>
-    <div class="card"><div class="ico">🔒</div><h3>Radically private</h3><p>No server, no telemetry, no account. Google's <code>drive.file</code> scope means the extension can only touch the one spreadsheet it created — enforced by Google, not promised by us.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM9 8v12M15 8v12"/></svg></div><h3>A tab per browser</h3><p>Chrome, Firefox and Edge each write to their own tab in the same spreadsheet — nothing ever overlaps or overwrites. Rename tabs or the sheet freely; sync follows the file, not the name.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.5"/></svg></div><h3>Your cadence</h3><p>Instant by default — a starred page appears in the sheet within seconds. Prefer batches? Every 15 minutes, hourly, daily, or manual-only with a pending-count badge.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M7 4 3.5 7.5 7 11M3.5 7.5H17M17 13l3.5 3.5L17 20M20.5 16.5H7"/></svg></div><h3>Both directions</h3><p>Read and search every browser's bookmarks from the popup. One click pulls what your other browsers saved into this one — additive only, nothing is ever deleted.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h16M4 20v-3L14.5 6.5a2.1 2.1 0 0 1 3 3L7 20zM12.5 8.5l3 3"/></svg></div><h3>Rich capture</h3><p>Toolbar saves grab the page description — or the exact text you highlighted — plus site name and reading time. The description column doubles as your notes field.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-8M21 19H3"/></svg></div><h3>Opt-in visit stats</h3><p>Enable it and each save records how often you visited the page and when last — read locally from your browser history, written only into your own sheet.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="9" rx="1.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10M12 14v2"/></svg></div><h3>Radically private</h3><p>No server, no telemetry, no account. Google's <code>drive.file</code> scope means the extension can only touch the one spreadsheet it created — enforced by Google, not promised by us.</p></div>
   </div>
 </div></section>
 
 <section id="how"><div class="wrap">
   <p class="kicker">How it works</p>
   <h2>Three steps, then forget it exists</h2>
-  <div class="steps">
+  <div class="steps" style="margin-top:26px">
     <div class="step"><h3>Install</h3><p>Add SheetBookmark to any browser you use — each install is a first-class citizen.</p></div>
     <div class="step"><h3>Connect Google Sheets</h3><p>One click, one consent screen. The extension creates <b>“My SheetBookmark Collection”</b> in your Drive — or finds the one your other browser already made — and imports your existing bookmarks.</p></div>
-    <div class="step"><h3>Bookmark as you always did</h3><p>Ctrl/Cmd&nbsp;+&nbsp;D, the star icon, or the toolbar button. Rows appear in that browser's tab of your sheet; the popup shows the union of all of them.</p></div>
+    <div class="step"><h3>Bookmark as you always did</h3><p>Ctrl/Cmd&nbsp;+&nbsp;D, the star icon, or the toolbar button. Rows appear in that browser's tab; the popup shows the union of all of them.</p></div>
   </div>
 </div></section>
 
@@ -164,8 +203,6 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
   <h2>What the sheet actually looks like</h2>
   <p class="lede">A stable core of columns (A–I) that never changes, then optional extras appended at the tail. Sort it, filter it, add your own columns after the last one — it's a normal spreadsheet, because it is one.</p>
   <div class="sheet-demo">
-    <div class="sheet-bar"><span class="dot"></span> My SheetBookmark Collection</div>
-    <div class="sheet-tabs"><span class="on">Chrome — MacBook</span><span>Firefox — Home</span><span>Edge — Office PC</span></div>
     <div class="table-scroll"><table>
       <tr><th>timestamp</th><th>id</th><th>folder</th><th>browser</th><th>profile</th><th>os</th><th>source</th><th>title</th><th>url</th><th>description</th><th>site</th><th>reading</th><th>visits</th><th>last_visit</th><th>account</th></tr>
       <tr><td>2026-07-22T14:41:07+05:30</td><td>a1f4…</td><td>Bookmarks Bar</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>toolbar</td><td class="t">Model Context Protocol docs</td><td>modelcontextprotocol.io</td><td>Highlighted: “resources are how servers expose data…”</td><td>MCP</td><td>9 min</td><td>12</td><td>2026-07-21T09:12:44+05:30</td><td></td></tr>
@@ -181,7 +218,7 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
   <h2>The whole model is “there is nothing to trust”</h2>
   <div class="priv">
     <div><span class="tick">✓</span><span><b>No server.</b> Your browser talks to Google's Sheets &amp; Drive APIs. Nothing passes through us — there is no “us” to pass through.</span></div>
-    <div><span class="tick">✓</span><span><b>No telemetry.</b> Zero analytics, zero tracking, zero phoning home. The developer cannot see your data.</span></div>
+    <div><span class="tick">✓</span><span><b>No telemetry.</b> Zero analytics, zero tracking. Even error logs stay on your device — you choose if and when to share them.</span></div>
     <div><span class="tick">✓</span><span><b>Minimum scope.</b> <code>drive.file</code> — the extension can only access the spreadsheet it created. The rest of your Drive is invisible to it.</span></div>
     <div><span class="tick">✓</span><span><b>Token hygiene.</b> A ~1-hour access token in session memory, never written to disk. No client secret exists anywhere.</span></div>
   </div>
@@ -191,17 +228,21 @@ footer{border-top:1px solid var(--stroke);padding:36px 0 48px;font-size:14px;col
 <section id="faq"><div class="wrap">
   <p class="kicker">FAQ</p>
   <h2>Questions people actually ask</h2>
+  <div style="margin-top:24px">
   <details><summary>How do I sync bookmarks between Chrome and Firefox?</summary><p>Install SheetBookmark in both, click <em>Connect Google Sheets</em> in each with the same Google account. Chrome finds the sheet Firefox created (or vice versa) and adds its own tab. The popup in either browser shows both collections; “Get bookmarks from other browsers” copies them into the local bookmark bar.</p></details>
   <details><summary>Does it work across computers?</summary><p>Yes — the sheet lives in your Google Drive, so any install connected to the same Google account joins it, on any machine or OS.</p></details>
   <details><summary>What happens if I delete a row, rename the sheet, or move it?</summary><p>Rename and move anything — sync follows the file's identity, not its name or location. Deleting a row tells the extension that page is no longer saved, so bookmarking it again writes a fresh row.</p></details>
   <details><summary>Can it read my passwords or browsing history?</summary><p>Passwords: no — browsers expose no such API to extensions, and we wouldn't want one. History: only if you enable the optional visit-stats toggle, which triggers the browser's own permission prompt; it's read locally at save time and written only into your sheet.</p></details>
+  <details><summary>Something broke — how do I report it?</summary><p>Options page → Support → <em>Report a problem</em>. It opens a GitHub issue pre-filled with your version, browser and recent on-device error entries (URLs scrubbed) — you see and can edit everything before submitting. Nothing is ever sent automatically.</p></details>
   <details><summary>Is it really free?</summary><p>Yes. It's open-source, has no server costs to recoup, and Google Sheets is free. There is nothing to upsell.</p></details>
+  </div>
 </div></section>
 
 <footer><div class="wrap foot">
   <span>SheetBookmark — no server, no tracking, your sheet.</span>
   <div class="foot-links">
     <a href="https://github.com/ShuckZ77/sheetbookmark">GitHub</a>
+    <a href="https://github.com/ShuckZ77/sheetbookmark/issues/new">Report an issue</a>
     <a href="PRIVACY.html">Privacy</a>
     <a href="PUBLISHING.html">Publishing guide</a>
     <a href="TESTING.html">Testing guide</a>

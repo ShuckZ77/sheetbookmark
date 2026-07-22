@@ -129,3 +129,27 @@ export async function setCache(rows) {
 export async function resetAll() {
   await api.storage.local.clear();
 }
+
+const LOG_KEY = 'errorLog';
+const LOG_CAP = 50;
+
+/**
+ * On-device error journal: last 50 entries, never transmitted anywhere. Messages are
+ * scrubbed of URLs and anything token-shaped so even a copy-pasted diagnostic cannot
+ * leak what the user was bookmarking.
+ */
+export async function logError(context, error) {
+  const raw = String(error?.message ?? error ?? 'unknown');
+  const message = raw
+    .replace(/https?:\/\/\S+/g, '‹url›')
+    .replace(/ya29\.[\w.-]+/g, '‹token›')
+    .slice(0, 300);
+  const { [LOG_KEY]: list = [] } = await api.storage.local.get(LOG_KEY);
+  list.push({ at: toISTStamp(), context, message });
+  await api.storage.local.set({ [LOG_KEY]: list.slice(-LOG_CAP) });
+}
+
+export async function getErrorLog() {
+  const { [LOG_KEY]: list = [] } = await api.storage.local.get(LOG_KEY);
+  return list;
+}

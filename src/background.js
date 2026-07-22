@@ -148,7 +148,10 @@ let flushTimer;
 function scheduleFlush() {
   clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
-    flush().catch((error) => console.error('[bookmark-sync] flush failed', error));
+    flush().catch((error) => {
+      console.error('[sheetbookmark] flush failed', error);
+      store.logError('flush', error);
+    });
   }, FLUSH_DEBOUNCE_MS);
 }
 
@@ -505,7 +508,8 @@ async function toErrorResponse(error) {
     await setNeedsAuth(true);
     return { ok: false, needsAuth: true, error: error.message };
   }
-  console.error('[bookmark-sync]', error);
+  console.error('[sheetbookmark]', error);
+  await store.logError('handler', error);
   return { ok: false, error: error.message };
 }
 
@@ -538,7 +542,15 @@ api.bookmarks.onCreated.addListener(async (_id, node) => {
 
 api.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name !== SYNC_ALARM) return;
-  flush().catch((error) => console.error('[bookmark-sync] scheduled flush failed', error));
+  flush().catch((error) => {
+    console.error('[sheetbookmark] scheduled flush failed', error);
+    store.logError('alarm-sync', error);
+  });
+});
+
+// Anything that escapes every handler still lands in the on-device journal.
+globalThis.addEventListener?.('unhandledrejection', (event) => {
+  store.logError('unhandled', event.reason).catch(() => {});
 });
 
 api.runtime.onStartup.addListener(() => {
