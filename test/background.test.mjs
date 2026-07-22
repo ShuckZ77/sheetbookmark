@@ -46,6 +46,7 @@ const listeners = {};
 const alarms = {};
 let createdBookmarks = [];
 let bookmarkSearchResults = [];
+let historyVisits = {};
 
 const chrome = {
   storage: { local: makeArea(), session: makeArea() },
@@ -72,6 +73,7 @@ const chrome = {
     onAlarm: { addListener: (fn) => (listeners.alarm = fn) },
   },
   action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
+  history: { getVisits: async ({ url }) => historyVisits[url] ?? [] },
   identity: {
     getRedirectURL: () => 'https://ext.chromiumapp.org/',
     launchWebAuthFlow: async ({ url }) => {
@@ -87,8 +89,11 @@ globalThis.__BOOKMARK_CLIENT_ID__ = 'test-client.apps.googleusercontent.com';
 await import('../src/background.js');
 const { toISTStamp } = await import('../src/lib/store.js');
 
-const COLUMN = { timestamp: 0, browser: 1, profile: 2, os: 3, title: 4, url: 5, description: 6, folder: 7, source: 8, id: 9 };
-const HEADER = ['timestamp', 'browser', 'profile', 'os', 'title', 'url', 'description', 'folder', 'source', 'id'];
+const HEADER_ORDER = ['timestamp', 'id', 'folder', 'browser', 'profile', 'os', 'source', 'title', 'url', 'description', 'site', 'reading', 'visits', 'last_visit', 'account'];
+const COLUMN = Object.fromEntries(HEADER_ORDER.map((name, index) => [name, index]));
+/** Builds a positional sheet row from named fields — survives any future column reorder. */
+const rowValues = (row) => HEADER_ORDER.map((name) => row[name] ?? '');
+const HEADER = HEADER_ORDER;
 
 /** Router state, reset per test. */
 let appended = [];
@@ -107,6 +112,7 @@ function installFetch() {
   tabValues = {};
   createdBookmarks = [];
   bookmarkSearchResults = [];
+  historyVisits = {};
 
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -142,13 +148,13 @@ function installFetch() {
     if (url.includes('values:batchGet')) {
       return reply({ valueRanges: sheetTabs.map((tab) => ({ values: tabValues[tab.title] ?? [] })) });
     }
-    if (url.includes('A1%3AJ1')) return reply({ values: [HEADER] }); // header already present
+    if (url.includes('A1%3AO1')) return reply({ values: [HEADER] }); // header already present
     if (url.includes(':append')) {
       appended.push(...JSON.parse(init.body).values);
       return reply({});
     }
-    if (url.includes('A2%3AJ')) {
-      const title = decodeURIComponent(url).match(/values\/'(.+)'!A2:J/)?.[1] ?? '';
+    if (url.includes('A2%3AO')) {
+      const title = decodeURIComponent(url).match(/values\/'(.+)'!A2:O/)?.[1] ?? '';
       return reply({ values: tabValues[title] ?? [] });
     }
     return reply({});
@@ -188,7 +194,7 @@ test('saveTab appends one fully-populated row into this install’s own tab', as
   assert.equal(appended.length, 1);
 
   const appendCall = requests.find((request) => request.url.includes(':append'));
-  assert.ok(decodeURIComponent(appendCall.url).includes("'Test'!A:J"), 'row must land in the install’s own tab');
+  assert.ok(decodeURIComponent(appendCall.url).includes("'Test'!A:O"), 'row must land in the install’s own tab');
 
   const [row] = appended;
   assert.equal(row[COLUMN.url], 'https://alpha.example/');
@@ -207,10 +213,62 @@ test('saveTab refuses a page that is not http(s)', async () => {
 
 test('the same page under a tracking parameter is only written once', async () => {
   await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/post' } });
+  // Reflect reality in the mock sheet: the row now exists in this install's tab.
+  tabValues.Test = [rowValues({ timestamp: 't', title: 'Alpha', browser: 'Chrome', profile: 'Test', os: 'mac', source: 'toolbar', url: 'https://alpha.example/post' })];
   const second = await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://www.alpha.example/post?utm_source=x' } });
 
   assert.equal(second.deduped, true);
   assert.equal(appended.length, 1);
+});
+
+test('deleting a row from the sheet makes the page saveable again (the user repro)', async () => {
+  await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
+  assert.equal(appended.length, 1);
+
+  // User deletes the row in the Sheets UI: the own tab no longer contains the URL.
+  tabValues.Test = [];
+
+  const again = await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
+  assert.equal(again.deduped, undefined, 'must not refuse a page whose row is gone');
+  assert.equal(appended.length, 2, 'the re-save writes a fresh row');
+});
+
+test('a Ctrl+D re-bookmark also heals after sheet-side deletion', async () => {
+  await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
+  tabValues.Test = [];
+
+  await listeners.created('x', { title: 'Alpha', url: 'https://alpha.example/', parentId: '1' });
+  await settle(30);
+
+  const { queue } = await chrome.storage.local.get('queue');
+  assert.equal(queue.length, 1, 'the native capture is queued instead of refused');
+});
+
+test('when the verify read fails, the cache is trusted and nothing duplicates', async () => {
+  await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
+  tabValues.Test = [];
+  nextStatus = (url) => (url.includes('A2%3AO') ? 500 : 200); // sheet read breaks
+
+  const again = await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
+  assert.equal(again.deduped, true, 'offline fallback refuses rather than risking duplicates');
+  assert.equal(appended.length, 1);
+});
+
+test('a refresh rebuilds the seen-set from the sheet plus the queue', async () => {
+  await chrome.storage.local.set({
+    seenUrls: ['https://gone.example', 'https://kept.example', 'https://queued.example'],
+    queue: [queuedRow('queued')],
+    syncMode: 'manual',
+  });
+  tabValues.Test = [rowValues({ timestamp: 't', title: 'Kept', browser: 'Chrome', profile: 'Test', os: 'mac', source: 'toolbar', url: 'https://kept.example/' })];
+
+  await send({ type: 'listRows', force: true });
+
+  const { seenUrls } = await chrome.storage.local.get('seenUrls');
+  const seen = new Set(seenUrls);
+  assert.ok(!seen.has('https://gone.example'), 'deleted row un-learned');
+  assert.ok(seen.has('https://kept.example'), 'live row kept');
+  assert.ok(seen.has('https://queued.example'), 'queued row survives — it is not in the sheet yet');
 });
 
 test('a renamed own tab is followed by id, not recreated', async () => {
@@ -219,7 +277,7 @@ test('a renamed own tab is followed by id, not recreated', async () => {
   await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
 
   const appendCall = requests.find((request) => request.url.includes(':append'));
-  assert.ok(decodeURIComponent(appendCall.url).includes("'My Renamed Tab'!A:J"));
+  assert.ok(decodeURIComponent(appendCall.url).includes("'My Renamed Tab'!A:O"));
   assert.ok(!requests.some((request) => request.body?.requests?.[0]?.addSheet), 'no new tab was created');
 
   const { tabName } = await chrome.storage.local.get('tabName');
@@ -317,7 +375,7 @@ test('connect reuses the app’s sheet even after the user renamed it', async ()
 test('connect with several candidate sheets asks the user instead of guessing', async () => {
   await chrome.storage.local.set({ sheetId: '', tabId: null });
   driveFiles = [
-    { id: 'A', name: 'Bookmark Sync' },
+    { id: 'A', name: 'SheetBookmark' },
     { id: 'B', name: 'Bookmark Sync (restored)' },
   ];
 
@@ -387,6 +445,34 @@ test('setSync reconfigures the alarm', async () => {
   assert.equal(bad.ok, false);
 });
 
+test('visit stats land in the row only when the user enabled them', async () => {
+  historyVisits['https://alpha.example/'] = [{ visitTime: 1700000000000 }, { visitTime: 1700000500000 }];
+
+  // Off by default: columns stay empty even though history has data.
+  await send({ type: 'saveTab', tab: { title: 'A', url: 'https://alpha.example/' } });
+  assert.equal(appended[0][COLUMN.visits], '', 'no history read without the opt-in');
+
+  await chrome.storage.local.set({ syncMode: 'instant', visitStats: true, seenUrls: [] });
+  await send({ type: 'saveTab', tab: { title: 'B', url: 'https://alpha.example/' } });
+
+  const row = appended[1];
+  assert.equal(row[COLUMN.visits], '2');
+  assert.equal(row[COLUMN.last_visit], toISTStamp(1700000500000), 'latest visit, in IST');
+});
+
+test('toolbar extras (site, reading, account) are written through', async () => {
+  await send({
+    type: 'saveTab',
+    tab: { title: 'A', url: 'https://alpha.example/', description: 'd', site: 'The Verge', reading: '7 min', account: 'yes' },
+  });
+
+  const [row] = appended;
+  assert.equal(row[COLUMN.site], 'The Verge');
+  assert.equal(row[COLUMN.reading], '7 min');
+  assert.equal(row[COLUMN.account], 'yes');
+  assert.equal(row[COLUMN.description], 'd');
+});
+
 // --- Sheet → browser import -------------------------------------------------
 
 test('importFromSheet copies only foreign, missing, safe bookmarks into a folder', async () => {
@@ -395,11 +481,11 @@ test('importFromSheet copies only foreign, missing, safe bookmarks into a folder
     { sheetId: 8, title: 'Firefox — Laptop' },
   ];
   tabValues = {
-    Test: [['t', 'Chrome', 'Test', 'mac', 'Mine', 'https://mine.example/']],
+    Test: [rowValues({ timestamp: 't', title: 'Mine', browser: 'Chrome', profile: 'Test', os: 'mac', source: 'toolbar', url: 'https://mine.example/' })],
     'Firefox — Laptop': [
-      ['t', 'Firefox', 'FF', 'linux', 'Alpha', 'https://alpha.example/'], // already in local tree
-      ['t', 'Firefox', 'FF', 'linux', 'Fresh', 'https://fresh.example/'],
-      ['t', 'Firefox', 'FF', 'linux', 'Evil', 'javascript:alert(1)'], // must never become a bookmark
+      rowValues({ timestamp: 't', title: 'Alpha', browser: 'Firefox', profile: 'FF', os: 'linux', source: 'native', url: 'https://alpha.example/' }), // already in local tree
+      rowValues({ timestamp: 't', title: 'Fresh', browser: 'Firefox', profile: 'FF', os: 'linux', source: 'native', url: 'https://fresh.example/' }),
+      rowValues({ timestamp: 't', title: 'Evil', browser: 'Firefox', profile: 'FF', os: 'linux', source: 'native', url: 'javascript:alert(1)' }), // must never become a bookmark
     ],
   };
 
@@ -409,7 +495,7 @@ test('importFromSheet copies only foreign, missing, safe bookmarks into a folder
   assert.equal(result.imported, 1);
 
   const [folder, bookmark] = createdBookmarks;
-  assert.equal(folder.title, 'Bookmark Sync');
+  assert.equal(folder.title, 'SheetBookmark');
   assert.equal(folder.url, undefined, 'first creation is the folder');
   assert.equal(bookmark.url, 'https://fresh.example/');
   assert.equal(bookmark.parentId, 'bm1');
@@ -422,12 +508,12 @@ test('importFromSheet copies only foreign, missing, safe bookmarks into a folder
 });
 
 test('importFromSheet reuses an existing Bookmark Sync folder', async () => {
-  bookmarkSearchResults = [{ id: 'existing-folder', title: 'Bookmark Sync' }];
+  bookmarkSearchResults = [{ id: 'existing-folder', title: 'SheetBookmark' }];
   sheetTabs = [
     { sheetId: 7, title: 'Test' },
     { sheetId: 8, title: 'Edge' },
   ];
-  tabValues = { Edge: [['t', 'Edge', 'E', 'win', 'New', 'https://new.example/']] };
+  tabValues = { Edge: [rowValues({ timestamp: 't', title: 'New', browser: 'Edge', profile: 'E', os: 'win', source: 'native', url: 'https://new.example/' })] };
 
   const result = await send({ type: 'importFromSheet' });
 

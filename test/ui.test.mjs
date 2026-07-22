@@ -40,7 +40,6 @@ test('options.js offers the Connect button and sync controls when not yet connec
   assert.equal(doc.getElementById('sync-mode').value, 'instant', 'default cadence pre-selected');
   assert.equal(typeof doc.getElementById('sync-mode').onchange, 'function', 'cadence change wired');
   assert.equal(doc.getElementById('sync-now').disabled, true, 'sync tools parked until connected');
-  assert.equal(doc.getElementById('step-connect').textContent, '1', 'step 1 not yet done');
   assert.equal(doc.getElementById('profile').placeholder, 'Chrome — macOS', 'label pre-filled from UA + platform');
   for (const id of ['connect', 'disconnect', 'open-sheet', 'sync-now', 'import-others', 'reset']) {
     assert.equal(typeof doc.getElementById(id).onclick, 'function', `${id} handler wired`);
@@ -59,7 +58,6 @@ test('options.js shows the connected state and this install’s tab name', async
   assert.equal(doc.getElementById('connected-state').classList.contains('hidden'), false, 'connected panel shown');
   assert.equal(doc.getElementById('disconnected-state').classList.contains('hidden'), true, 'Connect button hidden');
   assert.equal(doc.getElementById('tab-name').textContent, 'Chrome — MacBook', 'own tab surfaced to the user');
-  assert.equal(doc.getElementById('step-connect').textContent, '✓', 'step 1 shows done');
   assert.equal(doc.getElementById('sync-now').disabled, false, 'sync tools unlocked');
 });
 
@@ -97,6 +95,63 @@ test('popup.js renders rows from the sheet and wires its controls', async () => 
   assert.equal(typeof doc.getElementById('save-tab').onclick, 'function', 'save handler wired');
   assert.equal(typeof doc.getElementById('search').oninput, 'function', 'search handler wired');
   assert.match(doc.getElementById('count').textContent, /2 saved/);
+});
+
+test('an expired session shows the amber pill and a Sign-in-again button in place', async () => {
+  installGlobals(page('options.html'), {
+    status: { ok: true, connected: true, needsAuth: true, sheetId: 'S', tabName: 'Chrome — Mac' },
+  });
+
+  await script('options.js');
+  await settle();
+
+  const doc = globalThis.document;
+  assert.equal(doc.getElementById('conn-pill').textContent, 'Signed out');
+  assert.ok(doc.getElementById('conn-pill').className.includes('warn'));
+  assert.equal(doc.getElementById('reauth').classList.contains('hidden'), false, 'recovery button is right there');
+  assert.equal(typeof doc.getElementById('reauth').onclick, 'function');
+});
+
+test('an install that synced before offers to REconnect, not connect', async () => {
+  const ctx = installGlobals(page('options.html'), { status: { ok: true, connected: false } });
+  ctx.store.set('tabName', 'Chrome — Mac');
+
+  await script('options.js');
+  await settle();
+
+  assert.equal(globalThis.document.getElementById('connect-label').textContent, 'Reconnect Google Sheets');
+});
+
+test('a toolbar save carries the page description read via scripting', async () => {
+  const status = { ok: true, connected: true, needsAuth: false, profile: 'W', sheetId: 'S', queued: 0 };
+  const { messages } = installGlobals(page('popup.html'), { status, rows: [] });
+
+  await script('popup.js');
+  await settle(40);
+
+  await globalThis.document.getElementById('save-tab').onclick();
+
+  const save = messages.find((m) => m.type === 'saveTab');
+  assert.ok(save, 'save message sent');
+  assert.equal(save.tab.url, 'https://sample.example/');
+  assert.equal(save.tab.description, 'A sample description', 'meta description travels with the save');
+  assert.equal(save.tab.site, 'Sample Site');
+  assert.equal(save.tab.reading, '2 min', '440 words at 220 wpm');
+  assert.equal(save.tab.account, '', 'account flag unchecked by default');
+});
+
+test('the save button reads Already saved when the page is in the sheet', async () => {
+  const status = { ok: true, connected: true, needsAuth: false, profile: 'W', sheetId: 'S', queued: 0 };
+  const ctx = installGlobals(page('popup.html'), { status, rows: [] });
+  ctx.savedState = true;
+
+  await script('popup.js');
+  await settle(40);
+
+  const doc = globalThis.document;
+  assert.equal(doc.getElementById('save-label').textContent, '✓ Already saved');
+  assert.equal(doc.getElementById('save-tab').classList.contains('is-saved'), true);
+  assert.equal(typeof doc.getElementById('save-tab').onclick, 'function', 'still clickable — a click verifies and can heal');
 });
 
 test('popup.js shows the setup notice when not connected', async () => {

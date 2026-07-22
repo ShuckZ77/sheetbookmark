@@ -1,10 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Bookmark Sheet Sync",
-  "version": "0.1.0",
-  "description": "Save bookmarks from any browser into one Google Sheet, and read them back anywhere.",
-  "permissions": ["identity", "bookmarks", "storage", "activeTab", "scripting", "alarms"],
-  "host_permissions": ["https://sheets.googleapis.com/*", "https://www.googleapis.com/*"],
+  "name": "SheetBookmark",
+  "version": "1.0.0",
+  "description": "Save bookmarks from every browser into one Google Sheet in your own Drive \u2014 a tab per browser, searchable everywhere.",
+  "permissions": [
+    "identity",
+    "bookmarks",
+    "storage",
+    "activeTab",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://sheets.googleapis.com/*",
+    "https://www.googleapis.com/*"
+  ],
   "action": {
     "default_title": "Save this tab to your bookmark sheet",
     "default_popup": "ui/popup.html",
@@ -24,5 +34,9 @@
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  }
+  },
+  "optional_permissions": [
+    "history"
+  ],
+  "homepage_url": "https://shuckz77.github.io/sheetbookmark/"
 }

@@ -14,7 +14,7 @@ Companion docs: [TESTING.md](TESTING.md) (try it locally first) · [ANALYTICS.md
 
 ## Start here — the order that always applies
 
-Whether it's just you testing locally or a stranger installing from a store, **the extension cannot
+Whether it's just you testing locally or a user installing from a store, **the extension cannot
 connect until Google knows about it.** This part is unconditional, in this order:
 
 1. **Google Cloud project** → enable **Sheets API** + **Drive API** (Step 2.1–2.2).
@@ -92,14 +92,59 @@ Google renamed the old "OAuth consent screen" — it's now **Google Auth Platfor
 6. *Audience* → **Publish app → In production**. Because `drive.file` is non-sensitive: **no
    verification, no "unverified app" warning, no user cap.** (Optional, later: *brand verification*
    — 2–3 days — only to show your name/logo on the consent screen; needs a homepage domain you own.)
-7. Bake and build:
+7. **The downloaded JSON.** After creating the client, the console offers *Download JSON*. That
+   file is only a container for the client's metadata — the **single value this project uses is
+   `client_id`** (the string ending `.apps.googleusercontent.com`). Open the JSON, copy it, bake it:
    ```sh
    echo "YOUR-ID.apps.googleusercontent.com" > .keys/client-id.txt
-   npm run build && npm run zip
+   np
    ```
+   The build's "no OAuth client id" warning disappears, and the options page's *Publisher setup*
+   card is replaced by a live **Connect Google Sheets** button.
 
-Now run the full [TESTING.md](TESTING.md) checklist across all three browsers before submitting
-anything.
+   The JSON also contains a `client_secret`. **We never use it** — the implicit flow authenticates
+   with the client ID plus the pre-registered redirect URI alone (that's the whole point: an
+   extension has nowhere safe to keep a secret). Do not commit the JSON to the repo: the client ID
+   is public by design, the secret is not. `.keys/client-id.txt` holds only the public part and is
+   safe to commit.
+
+8. **Verify the wiring** before touching any store: reload the unpacked extension, open options →
+   Connect → approve → the *SheetBookmark* sheet appears in your Drive. Then run the full
+   [TESTING.md](TESTING.md) checklist across all three browsers.
+
+### Why "Web application" and not "Chrome Extension" — the compatibility story
+
+The console's client types are not cosmetic — they select *which OAuth mechanism* the client can
+serve, and only one of them is vendor-neutral:
+
+- The **"Chrome Extension"** client type exists solely for `chrome.identity.getAuthToken()`,
+  Chrome's proprietary shortcut. It doesn't use redirect URIs at all — you bind the client to a
+  Chrome Web Store item ID, and the token is minted through the Google account **signed into the
+  Chrome browser itself**. That machinery ships only in Google-branded Chrome: Firefox has no
+  `getAuthToken` in its identity API at all, and Edge/Brave/Opera/Vivaldi lack the Google-account
+  plumbing it depends on. One client type, one browser, one store ID, and only the profile's own
+  Google account.
+- The **"Web application"** type is plain, standards-based redirect OAuth: "send the token to one
+  of these pre-registered URLs." Our code uses `identity.launchWebAuthFlow()`, which every engine
+  implements (Chromium *and* Firefox), and which is nothing more than "open Google's sign-in page
+  in a popup, wait for it to redirect to the magic URL, hand that URL back." Any browser that can
+  open a popup qualifies.
+
+What makes it *wider* compatible in practice:
+
+| | Chrome Extension client (`getAuthToken`) | Web application client (`launchWebAuthFlow`) |
+| --- | --- | --- |
+| Chrome | ✅ (only if signed into Chrome) | ✅ |
+| Edge, Brave, Opera, Vivaldi | ❌ | ✅ |
+| Firefox | ❌ API doesn't exist | ✅ |
+| Google account used | the browser profile's, only | any — the user picks at the consent screen |
+| Redirect URIs per client | none (bound to one CWS item) | many — dev, Firefox, Edge store, Chrome store all on **one** client |
+| Client secret needed | no | no (implicit flow ignores it) |
+
+So "Web application" here doesn't mean "a website" — it means *redirect-based OAuth*, the only
+mechanism all six target browsers share. The extension simply plays the role of a web app whose
+"site" is the redirect URL the browser intercepts (`chromiumapp.org` on Chromium, the loopback on
+Firefox).
 
 ## Step 3 — Prepare listing assets (once, reused everywhere)
 
@@ -180,9 +225,10 @@ Everything is automatic except one Chrome opt-in — full walkthrough in
 | Permission | Justification |
 | --- | --- |
 | `identity` | Obtains a Google OAuth access token via `identity.launchWebAuthFlow`, so the user can authorize the extension to create and update its own bookmark spreadsheet in their Google Drive. |
-| `bookmarks` | Reads the user's bookmarks to sync them to that spreadsheet, and listens for `bookmarks.onCreated` so bookmarks saved with Ctrl/Cmd+D are captured. Writes happen in exactly one case: when the user clicks "Get bookmarks from other browsers", new bookmarks are created inside a dedicated "Bookmark Sync" folder. Nothing is ever modified or deleted. |
+| `bookmarks` | Reads the user's bookmarks to sync them to that spreadsheet, and listens for `bookmarks.onCreated` so bookmarks saved with Ctrl/Cmd+D are captured. Writes happen in exactly one case: when the user clicks "Get bookmarks from other browsers", new bookmarks are created inside a dedicated "SheetBookmark" folder. Nothing is ever modified or deleted. |
 | `storage` | Stores the user's settings (sync cadence, profile label), the id of the spreadsheet and tab the extension created, a queue of bookmarks not yet uploaded, and the list of already-synced URLs used to avoid duplicates. |
 | `activeTab` | When the user clicks the toolbar button, reads the title and URL of the current tab so it can be saved. Only on an explicit click. |
+| `history` (optional) | Requested at runtime only if the user enables "record visit count". Reads visit count and last-visit time for a page being bookmarked, locally, at save time; written only into the user's own spreadsheet. Never requested at install. |
 | `scripting` | Used together with activeTab, only on that same explicit click, to read the page's meta description so the sheet's description column can be filled. Never runs on any other page or event. |
 | `alarms` | Runs the sync schedule the user picks (instant with retry, or every 15 min / 1 h / 8 h / 24 h), and retries uploads that were queued while offline. |
 | `https://sheets.googleapis.com/*` | Calls the Google Sheets API to create the bookmark spreadsheet, manage each browser's tab, and read and append rows. |

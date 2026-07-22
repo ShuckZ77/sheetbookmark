@@ -18,7 +18,7 @@ import * as store from './lib/store.js';
 const SYNC_ALARM = 'sync';
 const FLUSH_DEBOUNCE_MS = 1500;
 const CACHE_TTL_MS = 60_000;
-const IMPORT_FOLDER = 'Bookmark Sync';
+const IMPORT_FOLDER = 'SheetBookmark';
 
 /** Minutes between alarm firings per mode. 'instant' keeps a 1-minute retry for offline queues. */
 const ALARM_MINUTES = { instant: 1, 15: 15, 60: 60, 480: 480, 1440: 1440 };
@@ -44,18 +44,44 @@ let environmentPromise;
 const environment = () =>
   (environmentPromise ??= Promise.all([detectBrowser(), detectOs()]).then(([browser, os]) => ({ browser, os })));
 
-async function buildRow({ title, url, description = '', folder = '', source, timestamp }) {
-  const [{ browser, os }, { profileLabel }] = await Promise.all([environment(), store.getSettings()]);
+/**
+ * Visit statistics for a URL, only when the user enabled the optional history permission.
+ * A snapshot at save time: rows are append-only, so counts are "as of when you saved it".
+ */
+async function visitStatsFor(url) {
+  const { visitStats } = await store.getSettings();
+  if (!visitStats || !api.history) return {};
+  try {
+    const visits = await api.history.getVisits({ url });
+    if (!visits.length) return {};
+    const last = Math.max(...visits.map((visit) => visit.visitTime ?? 0));
+    return { visits: String(visits.length), last_visit: last ? store.toISTStamp(last) : '' };
+  } catch {
+    return {};
+  }
+}
+
+async function buildRow({ title, url, description = '', site = '', reading = '', account = '', folder = '', source, timestamp }) {
+  const [{ browser, os }, { profileLabel }, stats] = await Promise.all([
+    environment(),
+    store.getSettings(),
+    visitStatsFor(url),
+  ]);
   return {
     timestamp: timestamp ?? store.toISTStamp(),
+    title,
+    description,
+    site,
+    reading,
+    visits: stats.visits ?? '',
+    last_visit: stats.last_visit ?? '',
+    account,
+    folder,
     browser,
     profile: profileLabel,
     os,
-    title,
-    url,
-    description,
-    folder,
     source,
+    url,
     id: crypto.randomUUID(),
   };
 }
@@ -126,10 +152,41 @@ function scheduleFlush() {
   }, FLUSH_DEBOUNCE_MS);
 }
 
+/**
+ * The seen-set is a CACHE of the sheet, not a truth of its own. When a candidate is
+ * about to be refused as already-saved, this re-checks the install's own tab: a row the
+ * user deleted from the sheet un-learns its URL, and the save proceeds. Offline or
+ * signed out, it silently trusts the cache — worst case is a refusal, never a duplicate.
+ */
+async function unlearnDeletedRows(seen, hits) {
+  const { sheetId } = await store.getSettings();
+  if (!sheetId) return;
+  try {
+    const ownUrls = await callSheets(async (token) => {
+      const title = await ensureOwnTabLive(token);
+      const rows = await readTabRows(token, sheetId, title);
+      return new Set(rows.filter((row) => row.url).map((row) => store.normalizeUrl(row.url)));
+    });
+    const queued = new Set((await store.getQueue()).map((row) => store.normalizeUrl(row.url)));
+    for (const candidate of hits) {
+      const key = store.normalizeUrl(candidate.url);
+      if (!ownUrls.has(key) && !queued.has(key)) seen.delete(key);
+    }
+  } catch {
+    // network/auth unavailable: keep the cached view
+  }
+}
+
 /** Adds every not-yet-seen candidate to the queue. Returns how many were new. */
-async function record(candidates) {
+async function record(candidates, { verify = false } = {}) {
   const result = await withLock(async () => {
     const seen = await store.getSeen();
+
+    if (verify) {
+      const hits = candidates.filter((candidate) => seen.has(store.normalizeUrl(candidate.url)));
+      if (hits.length) await unlearnDeletedRows(seen, hits);
+    }
+
     const rows = [];
 
     for (const candidate of candidates) {
@@ -231,9 +288,12 @@ async function handleSaveTab({ tab }) {
       title: tab.title || tab.url,
       url: tab.url,
       description: (tab.description ?? '').slice(0, 500),
+      site: tab.site ?? '',
+      reading: tab.reading ?? '',
+      account: tab.account ?? '',
       source: 'toolbar',
     },
-  ]);
+  ], { verify: true });
   if (!added) return { ok: true, deduped: true };
 
   return flush();
@@ -241,17 +301,38 @@ async function handleSaveTab({ tab }) {
 
 const flattenTabs = (tabs) => tabs.flatMap((tab) => tab.rows);
 
+/**
+ * Reads the whole sheet, refreshes the popup cache, and rebuilds the seen-set from what
+ * this install's tab ACTUALLY contains plus the upload queue — so deleting a row in the
+ * sheet makes that page saveable again by the next refresh, with zero extra requests.
+ */
+async function refreshFromSheet({ interactive = false } = {}) {
+  const { sheetId, tabId } = await store.getSettings();
+  if (!sheetId) return null;
+
+  const tabs = await callSheets((token) => readAllTabs(token, sheetId), { interactive });
+  const rows = flattenTabs(tabs);
+  await store.setCache(rows);
+
+  const own = tabs.find((tab) => tab.tabId === tabId);
+  if (own) {
+    await withLock(async () => {
+      const next = new Set(own.rows.filter((row) => row.url).map((row) => store.normalizeUrl(row.url)));
+      for (const queued of await store.getQueue()) next.add(store.normalizeUrl(queued.url));
+      await store.saveSeen(next);
+    });
+  }
+  return rows;
+}
+
 async function handleListRows({ force }) {
   const cache = await store.getCache();
   if (!force && cache?.rows?.length && Date.now() - cache.at < CACHE_TTL_MS) {
     return { ok: true, rows: cache.rows };
   }
 
-  const { sheetId } = await store.getSettings();
-  if (!sheetId) return { ok: false, error: 'Not connected' };
-
-  const rows = flattenTabs(await callSheets((token) => readAllTabs(token, sheetId)));
-  await store.setCache(rows);
+  const rows = await refreshFromSheet();
+  if (!rows) return { ok: false, error: 'Not connected' };
   await setNeedsAuth(false);
   return { ok: true, rows };
 }
@@ -333,11 +414,7 @@ async function handleSyncNow() {
   const result = await flush({ interactive: true });
   if (!result.ok) return result;
 
-  const { sheetId } = await store.getSettings();
-  if (sheetId) {
-    const rows = flattenTabs(await callSheets((token) => readAllTabs(token, sheetId)));
-    await store.setCache(rows);
-  }
+  await refreshFromSheet();
   await store.setSettings({ lastSyncAt: Date.now() });
   return result;
 }
@@ -407,6 +484,7 @@ async function handleDisconnect() {
 
 const HANDLERS = {
   status: handleStatus,
+  isSaved: async ({ url }) => ({ ok: true, saved: (await store.getSeen()).has(store.normalizeUrl(url)) }),
   saveTab: handleSaveTab,
   listRows: handleListRows,
   connect: handleConnect,
@@ -452,7 +530,7 @@ api.bookmarks.onCreated.addListener(async (_id, node) => {
       folder: await folderPathOf(node.parentId),
       source: 'native',
     },
-  ]);
+  ], { verify: true });
 
   // Interval and manual modes leave the row queued for the alarm or the Sync button.
   if (added && syncMode === 'instant') scheduleFlush();

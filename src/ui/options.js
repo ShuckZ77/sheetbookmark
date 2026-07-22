@@ -14,19 +14,40 @@ function setStatus(id, text, tone = '') {
   status.className = `status ${tone}`.trim();
 }
 
-/** The page guides: step 1 turns into a check once connected, and the sync tools stay parked until then. */
-function showConnected(connected, tabName = '') {
+function agoText(when) {
+  if (!when) return '';
+  const minutes = Math.round((Date.now() - when) / 60000);
+  if (minutes < 1) return 'Synced just now';
+  if (minutes < 60) return `Synced ${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 24 ? `Synced ${hours} h ago` : `Synced ${Math.round(hours / 24)} d ago`;
+}
+
+/**
+ * The hero is a state machine with no dead ends: healthy shows green + last sync;
+ * an expired Google session flips the pill amber and offers "Sign in again" right
+ * there; sync tools stay parked until connected.
+ */
+function showConnected(connected, tabName = '', { needsAuth = false, lastSyncAt = 0 } = {}) {
   $('connected-state').classList.toggle('hidden', !connected);
   $('disconnected-state').classList.toggle('hidden', connected);
   if (tabName) $('tab-name').textContent = tabName;
 
-  const step = $('step-connect');
-  step.textContent = connected ? '✓' : '1';
-  step.classList.toggle('done', connected);
+  const pill = $('conn-pill');
+  pill.textContent = needsAuth ? 'Signed out' : 'Connected';
+  pill.className = `pill ${needsAuth ? 'warn' : 'ok'}`;
+  $('reauth').classList.toggle('hidden', !needsAuth);
+  $('last-sync').textContent = connected && !needsAuth ? agoText(lastSyncAt) : '';
 
   $('sync-card').classList.toggle('waiting', !connected);
   $('sync-now').disabled = !connected;
   $('import-others').disabled = !connected;
+}
+
+async function refresh() {
+  const status = await send({ type: 'status' });
+  showConnected(Boolean(status?.connected), status?.tabName, status ?? {});
+  return status;
 }
 
 /**
@@ -83,7 +104,7 @@ async function connect(choice) {
     }
 
     $('sheet-choices').classList.add('hidden');
-    showConnected(true, result.tabName);
+    showConnected(true, result.tabName, { lastSyncAt: Date.now() });
     const imported = result.imported
       ? ` Imported ${result.imported} existing bookmark${result.imported === 1 ? '' : 's'} into your tab.`
       : '';
@@ -132,9 +153,26 @@ async function importFromSheet() {
   }
 }
 
+async function reauth() {
+  const button = $('reauth');
+  button.disabled = true;
+  try {
+    const result = await send({ type: 'authorize' });
+    if (result?.ok) {
+      setStatus('status', 'Signed in — syncing resumed.', 'ok');
+      await refresh();
+    } else {
+      setStatus('status', result?.error ?? 'Sign-in did not complete.', 'err');
+    }
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function disconnect() {
   await send({ type: 'disconnect' });
   showConnected(false);
+  $('connect-label').textContent = 'Reconnect Google Sheets';
   setStatus('status', 'Signed out on this browser. Your sheet is untouched.');
 }
 
@@ -185,23 +223,36 @@ async function init() {
   $('profile').placeholder = `${browser} — ${os}`;
   $('profile').value = settings.profileLabel;
   $('capture-native').checked = settings.captureNative;
+  $('visit-stats').checked = settings.visitStats;
   $('sync-mode').value = settings.syncMode;
 
   $('connect').onclick = () => connect();
+  $('reauth').onclick = reauth;
+  // Continuity, not amnesia: an install that has synced before offers to RE-connect.
+  if (settings.tabName || settings.importDone) $('connect-label').textContent = 'Reconnect Google Sheets';
   $('disconnect').onclick = disconnect;
   $('open-sheet').onclick = openSheet;
   $('sync-now').onclick = syncNow;
   $('import-others').onclick = importFromSheet;
   $('reset').onclick = reset;
   $('capture-native').onchange = (event) => setSettings({ captureNative: event.target.checked });
+  $('visit-stats').onchange = async (event) => {
+    // The permission prompt must come from this click; declined means the box stays off.
+    if (event.target.checked) {
+      const granted = await api.permissions.request({ permissions: ['history'] }).catch(() => false);
+      if (!granted) {
+        event.target.checked = false;
+        return;
+      }
+    } else {
+      await api.permissions.remove({ permissions: ['history'] }).catch(() => {});
+    }
+    await setSettings({ visitStats: event.target.checked });
+  };
   $('sync-mode').onchange = (event) => send({ type: 'setSync', syncMode: event.target.value });
   $('profile').onchange = (event) => setSettings({ profileLabel: event.target.value.trim() });
 
-  const status = await send({ type: 'status' });
-  showConnected(Boolean(status?.connected), status?.tabName);
-  if (status?.connected && status.needsAuth) {
-    setStatus('status', 'Your Google session expired. Reconnect to resume syncing.', 'err');
-  }
+  await refresh();
 }
 
 init();

@@ -216,29 +216,35 @@ test('appendRows chunks at 500 and posts RAW values in column order', async () =
   assert.equal(calls[1].body.values.length, 1);
   assert.ok(calls[0].url.includes('valueInputOption=RAW'), 'formulas must not be evaluated');
   assert.equal(calls[0].init.headers.Authorization, 'Bearer tok');
+  // Explicit order assertion: stable core (A–I), then the extension tail.
   assert.deepEqual(calls[1].body.values[0], [
     't500',
+    'id-500',
+    '',
     'Chrome',
     'Work',
     'macOS',
+    'toolbar',
     'Title 500',
     'https://example.com/500',
     '',
     '',
-    'toolbar',
-    'id-500',
+    '',
+    '',
+    '',
+    '',
   ]);
 });
 
 test('appendRows escapes a tab name containing a quote', async () => {
   const calls = stubFetch(() => ({ body: {} }));
   await appendRows('tok', 'SHEET', "Rishi's tab", [{ url: 'https://example.com' }]);
-  assert.ok(calls[0].url.includes(encodeURIComponent("'Rishi''s tab'!A:J")));
+  assert.ok(calls[0].url.includes(encodeURIComponent("'Rishi''s tab'!A:O")));
 });
 
 test('readTabRows maps positional cells onto column names', async () => {
   stubFetch(() => ({
-    body: { values: [['2026-01-01T00:00:00.000Z', 'Firefox', 'Home', 'Linux', 'T', 'https://x.dev']] },
+    body: { values: [['2026-01-01T00:00:00.000Z', 'x1', '', 'Firefox', 'Home', 'Linux', 'native', 'T', 'https://x.dev']] },
   }));
 
   const [row] = await readTabRows('tok', 'SHEET', 'Bookmarks');
@@ -264,7 +270,7 @@ test('readAllTabs pairs each tab with its rows in two requests', async () => {
     return {
       body: {
         valueRanges: [
-          { values: [['t', 'Chrome', 'W', 'mac', 'A', 'https://a.dev']] },
+          { values: [['t', 'a1', '', 'Chrome', 'W', 'mac', 'toolbar', 'A', 'https://a.dev']] },
           { values: [] },
         ],
       },

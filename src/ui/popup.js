@@ -43,6 +43,15 @@ function hueOf(host) {
 
 const busy = (isBusy) => $('mark').classList.toggle('busy', isBusy);
 
+let alreadySaved = false;
+
+const saveLabelText = () => (alreadySaved ? '✓ Already saved' : 'Save this tab');
+
+function paintSaveState() {
+  $('save-label').textContent = saveLabelText();
+  $('save-tab').classList.toggle('is-saved', alreadySaved);
+}
+
 function setPill(text, tone = '') {
   const pill = $('status-pill');
   pill.textContent = text;
@@ -184,22 +193,30 @@ async function authorize() {
 }
 
 /**
- * The page's meta description, readable here because the toolbar click grants activeTab.
- * Ctrl+D captures can't do this without the <all_urls> permission, so only toolbar saves
- * carry a description — the sheet column doubles as a user-editable notes field.
+ * Page details, readable here because the toolbar click grants activeTab. Ctrl+D captures
+ * can't run this without <all_urls>, so only toolbar saves carry them. Text the user has
+ * selected on the page wins over the meta description — highlight a sentence, hit Save,
+ * and it becomes the note.
  */
-async function readDescription(tabId) {
+async function readPageDetails(tabId) {
   try {
     const [injection] = await api.scripting.executeScript({
       target: { tabId },
-      func: () =>
-        document.querySelector('meta[name="description"]')?.content ||
-        document.querySelector('meta[property="og:description"]')?.content ||
-        '',
+      func: () => {
+        const meta = (selector) => document.querySelector(selector)?.content || '';
+        const selection = (window.getSelection?.().toString() || '').trim();
+        const words = (document.body?.innerText || '').trim().split(/\s+/).filter(Boolean).length;
+        return {
+          description: meta('meta[name="description"]') || meta('meta[property="og:description"]'),
+          selection,
+          site: meta('meta[property="og:site_name"]'),
+          words,
+        };
+      },
     });
-    return injection?.result ?? '';
+    return injection?.result ?? {};
   } catch {
-    return ''; // browser-internal pages refuse injection
+    return {}; // browser-internal pages refuse injection
   }
 }
 
@@ -216,10 +233,23 @@ async function saveActiveTab() {
       return;
     }
 
-    const description = await readDescription(tab.id);
-    const result = await send({ type: 'saveTab', tab: { title: tab.title ?? '', url: tab.url, description } });
+    const page = await readPageDetails(tab.id);
+    const result = await send({
+      type: 'saveTab',
+      tab: {
+        title: tab.title ?? '',
+        url: tab.url,
+        // A deliberate selection is a better note than boilerplate marketing copy.
+        description: ((page.selection || page.description) ?? '').trim().slice(0, 500),
+        site: (page.site ?? '').slice(0, 120),
+        reading: page.words ? `${Math.max(1, Math.round(page.words / 220))} min` : '',
+        account: $('account-flag').checked ? 'yes' : '',
+      },
+    });
+    $('account-flag').checked = false;
     if (result?.ok) {
-      label.textContent = result.deduped ? 'Already saved' : 'Saved';
+      label.textContent = result.deduped ? 'Already saved' : 'Saved ✓';
+      alreadySaved = true;
       await loadRows({ force: true });
     } else if (result?.needsAuth) {
       label.textContent = 'Sign in needed';
@@ -231,15 +261,21 @@ async function saveActiveTab() {
   } finally {
     busy(false);
     setTimeout(() => {
-      label.textContent = 'Save this tab';
+      paintSaveState();
       button.disabled = false;
     }, 1500);
   }
 }
 
-async function showActiveTabTitle() {
+/** The button tells the truth on open: a page already in the sheet reads "Already saved". */
+async function showActiveTabState() {
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
   $('save-sub').textContent = tab?.title ?? '';
+  if (tab?.url) {
+    const result = await send({ type: 'isSaved', url: tab.url });
+    alreadySaved = Boolean(result?.saved);
+    paintSaveState();
+  }
 }
 
 async function init() {
@@ -290,7 +326,7 @@ async function init() {
     setPill(status.queued ? `${status.queued} pending` : 'Synced', status.queued ? '' : 'ok');
   }
 
-  await Promise.all([showActiveTabTitle(), loadRows()]);
+  await Promise.all([showActiveTabState(), loadRows()]);
 }
 
 init();

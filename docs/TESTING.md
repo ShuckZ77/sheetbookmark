@@ -27,7 +27,7 @@ Firefox temporary add-ons vanish on restart — reload them each session.
 
 Run in this order; each step exercises a different subsystem.
 
-1. **Connect (Chrome first).** Options → Connect Google Sheets → approve. ✅ A *Bookmark Sync*
+1. **Connect (Chrome first).** Options → Connect Google Sheets → approve. ✅ A *SheetBookmark*
    spreadsheet appears in Drive with one tab named after your profile label, and your existing
    bookmarks are imported into it.
 2. **Instant capture.** `Cmd/Ctrl+D` any page. ✅ Row appears in Chrome's tab within seconds.
@@ -35,7 +35,7 @@ Run in this order; each step exercises a different subsystem.
 4. **Second browser joins (Edge).** Connect in Edge. ✅ No new spreadsheet; a second tab appears in
    the same sheet.
 5. **Cross-browser read.** Open the popup in Edge. ✅ Chrome's bookmarks are listed and filterable.
-6. **Sheet→browser.** Edge options → *Get bookmarks from other browsers*. ✅ A `Bookmark Sync`
+6. **Sheet→browser.** Edge options → *Get bookmarks from other browsers*. ✅ A `SheetBookmark`
    bookmarks folder appears containing Chrome's bookmarks; nothing else changes.
 7. **Rename-proofing.** Rename the spreadsheet and a tab in the Sheets UI, then save a bookmark.
    ✅ Row lands in the renamed tab; no duplicate sheet or tab is created.
@@ -48,5 +48,10 @@ Run in this order; each step exercises a different subsystem.
 
 - **Chrome/Edge:** `chrome://extensions` → the extension → *Service worker* → Inspect → Console.
 - **Firefox:** `about:debugging` → the extension → **Inspect**.
-- OAuth error `redirect_uri_mismatch` → the URI for *that* browser isn't on the OAuth client.
+- OAuth error `redirect_uri_mismatch` → read the `redirect_uri=` shown in the error. If it is NOT
+  `https://lmkchpbfpmencebnadolcfpchmfcnapg.chromiumapp.org/`, the loaded `dist/chrome` has lost
+  its manifest `key` (Chrome then derives a machine-specific id from the folder path) — run
+  `npm run build`, then **reload the extension**, and confirm the id on `chrome://extensions` reads
+  `lmkchpbfpmencebnadolcfpchmfcnapg`. If the URI *is* the pinned one, it simply isn't registered on
+  the OAuth client yet.
 - `403` on API calls → Sheets/Drive API not enabled on the Cloud project, or you're not a test user.

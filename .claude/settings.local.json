@@ -9,7 +9,26 @@
       "Bash(node --test test/background.test.mjs)",
       "Bash(npm run *)",
       "WebSearch",
-      "Bash(node scripts/build.mjs)"
+      "Bash(node scripts/build.mjs)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)",
+      "Bash(node -e \"const m=require\\('./dist/chrome/manifest.json'\\); console.log\\('dist folder key:', m.key?'present ✓':'MISSING ✗'\\)\")",
+      "Bash(unzip -p dist/*chrome*.zip manifest.json)",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>console.log\\('zip key:', JSON.parse\\(s\\).key?'PRESENT ✗':'absent ✓'\\)\\)\")",
+      "Bash(node *)",
+      "Bash(cd *)",
+      "Bash(python3 -)",
+      "Bash(sed -i '' \"s/export const SHEET_NAME = 'Bookmark Sync';/export const SHEET_NAME = 'SheetBookmark';/\" src/config.js)",
+      "Bash(sed -i '' \"s/const IMPORT_FOLDER = 'Bookmark Sync';/const IMPORT_FOLDER = 'SheetBookmark';/\" src/background.js)",
+      "Bash(sed -i '' \"s/'Bookmark Sync'/'SheetBookmark'/g\" test/background.test.mjs)",
+      "Bash(python3 -c ' *)",
+      "Bash(sed -i '' 's/  syncMode: '\\\\''instant'\\\\'',/  syncMode: '\\\\''instant'\\\\'',\\\\n  visitStats: false,/' src/lib/store.js)",
+      "Bash(node --check src/background.js)",
+      "Bash(node --check src/ui/popup.js)",
+      "Bash(node -e \"const m=require\\('./src/manifest.json'\\);console.log\\('perms:',m.permissions.join\\(','\\)\\);console.log\\('optional:',m.optional_permissions.join\\(','\\)\\);console.log\\('hosts:',m.host_permissions.join\\(','\\)\\)\")",
+      "Bash(xargs -n1 basename)",
+      "Bash(node --check src/ui/options.js)",
+      "Bash(git add *)"
     ]
   }
 }

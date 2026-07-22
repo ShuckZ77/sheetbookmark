@@ -112,6 +112,7 @@ const stableChrome = {
       if (msg.type === 'status') return ctx.status;
       if (msg.type === 'listRows') return { ok: true, rows: ctx.rows };
       if (msg.type === 'connect') return ctx.connectResult;
+      if (msg.type === 'isSaved') return { ok: true, saved: ctx.savedState ?? false };
       return { ok: true };
     },
     openOptionsPage: async () => {},
@@ -134,8 +135,12 @@ const stableChrome = {
       clear: async () => ctx.store.clear(),
     },
   },
-  permissions: { contains: async () => true, request: async () => true },
-  scripting: { executeScript: async () => [{ result: 'A sample description' }] },
+  permissions: { contains: async () => true, request: async () => true, remove: async () => true },
+  scripting: {
+    executeScript: async () => [
+      { result: { description: 'A sample description', selection: '', site: 'Sample Site', words: 440 } },
+    ],
+  },
 };
 
 let globalsReady = false;

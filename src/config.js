@@ -28,4 +28,4 @@ export const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
  * only the starting point — reuse is keyed on the file id, so users can rename or move
  * it freely. Each install writes to its own tab, named after its profile label.
  */
-export const SHEET_NAME = 'Bookmark Sync';
+export const SHEET_NAME = 'My SheetBookmark Collection';

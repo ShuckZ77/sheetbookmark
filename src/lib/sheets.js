@@ -3,7 +3,19 @@ const DRIVE = 'https://www.googleapis.com/drive/v3';
 const SHEET_MIME = 'application/vnd.google-apps.spreadsheet';
 const APPEND_CHUNK = 500;
 
-export const COLUMNS = ['timestamp', 'browser', 'profile', 'os', 'title', 'url', 'description', 'folder', 'source', 'id'];
+/**
+ * Column contract: a STABLE CORE (A–I) that never changes order, then extension columns
+ * appended strictly at the tail — new features may only ever add columns after the last
+ * one, never insert in the middle. Sparse optional data therefore clusters at the right
+ * edge of the sheet instead of punching holes through the readable core.
+ */
+export const COLUMNS = [
+  'timestamp', 'id', 'folder', 'browser', 'profile', 'os', 'source', 'title', 'url',
+  'description', 'site', 'reading', 'visits', 'last_visit', 'account',
+];
+
+/** Ranges are derived from the column count so schema changes can never desync them. */
+const LAST_COL = String.fromCharCode(64 + COLUMNS.length);
 
 export class SheetsError extends Error {
   constructor(message, status) {
@@ -78,7 +90,7 @@ export async function listTabs(token, sheetId) {
 }
 
 async function ensureHeader(token, sheetId, title) {
-  const header = await request(token, `${BASE}/${sheetId}/values/${range(title, 'A1:J1')}`);
+  const header = await request(token, `${BASE}/${sheetId}/values/${range(title, `A1:${LAST_COL}1`)}`);
   if (!header.values?.length) {
     await request(token, `${BASE}/${sheetId}/values/${range(title, 'A1')}?valueInputOption=RAW`, {
       method: 'PUT',
@@ -137,7 +149,7 @@ export async function appendRows(token, sheetId, tab, rows) {
     const chunk = rows.slice(offset, offset + APPEND_CHUNK).map(toValues);
     await request(
       token,
-      `${BASE}/${sheetId}/values/${range(tab, 'A:J')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      `${BASE}/${sheetId}/values/${range(tab, `A:${LAST_COL}`)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       { method: 'POST', body: JSON.stringify({ values: chunk }) },
     );
   }
@@ -147,7 +159,7 @@ const toRow = (values) => Object.fromEntries(COLUMNS.map((column, index) => [col
 
 /** Rows of a single tab, headers skipped. */
 export async function readTabRows(token, sheetId, tab) {
-  const data = await request(token, `${BASE}/${sheetId}/values/${range(tab, 'A2:J')}?majorDimension=ROWS`);
+  const data = await request(token, `${BASE}/${sheetId}/values/${range(tab, `A2:${LAST_COL}`)}?majorDimension=ROWS`);
   return (data.values ?? []).map(toRow);
 }
 
@@ -159,7 +171,7 @@ export async function readAllTabs(token, sheetId) {
   const tabs = await listTabs(token, sheetId);
   if (!tabs.length) return [];
 
-  const ranges = tabs.map((tab) => `ranges=${range(tab.title, 'A2:J')}`).join('&');
+  const ranges = tabs.map((tab) => `ranges=${range(tab.title, `A2:${LAST_COL}`)}`).join('&');
   const data = await request(token, `${BASE}/${sheetId}/values:batchGet?majorDimension=ROWS&${ranges}`);
   const valueRanges = data.valueRanges ?? [];
 

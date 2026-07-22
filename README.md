@@ -1,4 +1,4 @@
-# Bookmark Sheet Sync
+# SheetBookmark
 
 One Google Sheet, every browser — **and a separate tab per browser, so nothing ever overlaps.**
 Star a page in Chrome on your Mac, and it appears in the `Chrome — MacBook` tab of a spreadsheet in
@@ -15,7 +15,7 @@ single codebase with **no dependencies** — no bundler, no framework, no `npm i
 3. Bookmark pages exactly as they always did — `Ctrl`/`Cmd`+`D`, the star icon, or the
    extension's toolbar button.
 
-The extension creates a **Bookmark Sync** spreadsheet in the user's own Drive, adds a tab named
+The extension creates a **SheetBookmark** spreadsheet in the user's own Drive, adds a tab named
 after this install, imports the bookmarks they already have, and starts syncing. No client ID, no
 redirect URI, no sheet URL — the only thing anyone ever types is a label for the install
 (e.g. `Chrome — MacBook Pro`), because no browser exposes its profile or device name to extensions.
@@ -39,7 +39,7 @@ reinstalls never create duplicate sheets.
 **Sheet → browser** (explicit, never automatic):
 
 - **Get bookmarks from other browsers** copies anything the *other* tabs hold that this browser
-  lacks into a `Bookmark Sync` folder in its bookmarks. It only ever adds — it never deletes or
+  lacks into a `SheetBookmark` folder in its bookmarks. It only ever adds — it never deletes or
   overwrites, and imported items don't echo back into the sheet.
 - The popup needs no import at all: it reads every tab live, searchable and filterable by browser,
   one click to open.
@@ -50,11 +50,21 @@ sync follows. If a user deletes an install's tab, the next sync recreates it.
 
 ## Sheet layout
 
-One tab per install (named from its profile label), each with the same ten columns (A–J):
+One tab per install (named from its profile label). The schema is a **stable core (A–I)** that
+never changes, followed by **extension columns appended strictly at the tail** — new features may
+only ever add columns after the last one, so sparse optional data clusters at the right edge
+instead of punching holes through the readable core:
 
-| timestamp | browser | profile | os | title | url | description | folder | source | id |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-07-18T14:44:23+05:30 | Chrome | Chrome — MacBook | macOS | Anthropic | https://anthropic.com | AI safety and research… | Bookmarks Bar | toolbar | uuid |
+| timestamp | id | folder | browser | profile | os | source | title | url | description | site | reading | visits | last_visit | account |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+- **site** (og:site_name), **reading** (word-count → "7 min"): filled on toolbar saves.
+- **description**: text you had selected on the page wins over the meta description — highlight a
+  sentence, hit Save, it becomes your note.
+- **visits / last_visit**: snapshot from browser history at save time — only if the user enables
+  the opt-in (optional `history` permission, runtime prompt, off by default).
+- **account**: the "I have an account on this site" checkbox on the save popup — user-declared,
+  never read from anywhere. Makes the sheet answer "which sites am I registered on?".
 
 - **timestamp** is IST (UTC+5:30) wall-clock time with an explicit offset — readable, sortable, and
   unambiguous when the same sheet is written from machines in different timezones.
@@ -141,7 +151,7 @@ src/
     app.css          shared navy-and-green glass theme, light and dark
     popup.html/.js   save, search, browse all browsers, sync now
     options.html/.js connect, sync cadence, import, profile label, publisher setup
-scripts/build.mjs    builds both targets, bakes the client id, draws the atom icons
+scripts/build.mjs    builds both targets, bakes the client id, draws the grid-bookmark icons
 test/                unit, background integration, and UI-boot suites
 ```
 
@@ -150,9 +160,12 @@ Chrome requires an MV3 service worker and Firefox only supports an event page, s
 
 ## Honest limitations
 
-- **Deletions don't propagate.** Tabs are append-only logs; removing a bookmark in a browser leaves
-  its row, and removing a row doesn't touch any browser. This is a deliberate trade against the
-  failure mode where a sync bug mass-deletes someone's bookmark bar.
+- **Deletions don't propagate to browsers.** Removing a bookmark in a browser leaves its sheet row,
+  and removing a row never touches any browser's bookmarks — a deliberate trade against the failure
+  mode where a sync bug mass-deletes someone's bookmark bar. But the sheet is the truth for the
+  extension itself: **deleting a row makes that page saveable again** — the extension re-checks the
+  sheet before refusing a save as a duplicate, and re-learns its dedupe memory from the sheet on
+  every refresh.
 - **Bookmark *edits* aren't tracked** — only creation is captured.
 - **Sign-in is quiet but not permanent.** The implicit flow holds a ~1-hour access token renewed
   silently against your Google session; signed out of Google in a browser, the next sync asks for

@@ -1,5 +1,5 @@
 /**
- * Builds dist/chrome and dist/firefox from src/, and draws the atom icons.
+ * Builds dist/chrome and dist/firefox from src/, and draws the grid-bookmark icons.
  *
  *   node scripts/build.mjs          → unpacked folders, for loading in a browser
  *   node scripts/build.mjs --zip    → store-upload packages, plus a zip per target
@@ -36,7 +36,10 @@ const TARGETS = {
   chrome: {
     minimum_chrome_version: '102',
     background: { service_worker: 'background.js', type: 'module' },
-    ...(manifestKey && !forStore ? { key: manifestKey } : {}),
+    // The key ALWAYS ships in the dist folder so the unpacked extension keeps its pinned
+    // id (and therefore its registered OAuth redirect URI) — even when --zip also runs.
+    // It is stripped only inside the store archive, which is packed from a staging copy.
+    ...(manifestKey ? { key: manifestKey } : {}),
   },
   firefox: {
     background: { scripts: ['background.js'], type: 'module' },
@@ -51,11 +54,11 @@ const TARGETS = {
 const SIZES = [16, 32, 48, 128];
 const SAMPLES = 4;
 
-const NAVY_TOP = [17, 43, 77];
-const NAVY_BOTTOM = [6, 17, 31];
-const ORBIT = [52, 211, 153];
-const ELECTRON = [167, 243, 208];
-const NUCLEUS = [52, 211, 153];
+const NAVY_TOP = [16, 38, 66];
+const NAVY_BOTTOM = [8, 20, 38];
+const RIBBON_TOP = [16, 185, 129];
+const RIBBON_BOTTOM = [5, 150, 105];
+const CELL = [250, 250, 247];
 
 const CRC_TABLE = Int32Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -104,56 +107,46 @@ function encodePng(size, rgba) {
 const lerp = (a, b, t) => a.map((value, index) => value + (b[index] - value) * t);
 
 function insideRoundedSquare(x, y, size) {
-  const radius = size * 0.235;
+  const radius = size * 0.225;
   const nearestX = Math.min(Math.max(x, radius), size - radius);
   const nearestY = Math.min(Math.max(y, radius), size - radius);
   return (x - nearestX) ** 2 + (y - nearestY) ** 2 <= radius ** 2;
 }
 
-/** Distance from an ellipse's outline, using the first-order approximation |f-1| / |grad f|. */
-function distanceToEllipse(dx, dy, a, b, angle) {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const u = dx * cos + dy * sin;
-  const v = -dx * sin + dy * cos;
-
-  const f = (u * u) / (a * a) + (v * v) / (b * b);
-  const gradient = 2 * Math.hypot(u / (a * a), v / (b * b));
-  return gradient === 0 ? Infinity : Math.abs(f - 1) / gradient;
+/** Bookmark ribbon: a rectangle with a notch cut up into its bottom edge. */
+function insideRibbon(x, y, size) {
+  const half = size * 0.26;
+  const dx = Math.abs(x - size / 2);
+  if (dx > half || y < size * 0.12 || y > size * 0.9) return false;
+  return y <= size * 0.9 - size * 0.18 * (1 - dx / half);
 }
 
 /**
- * An atom: orbits, electrons, and a nucleus on a navy tile.
- *
- * Detail is dropped as the tile shrinks. Three orbits plus three electrons is simply
- * more information than a 16px favicon can carry — it renders as a green smudge — so
- * the smallest sizes fall back to two crossed orbits and a nucleus.
+ * The mark: a bookmark ribbon made of spreadsheet cells — the product in one shape.
+ * Detail drops with size: 2×3 white cells at 48px+, 2×2 below, so the 16px favicon
+ * stays crisp instead of mushing into a green smudge.
  */
 function renderIcon(size) {
   const rgba = Buffer.alloc(size * size * 4);
-  const centre = size / 2;
+  const total = SAMPLES * SAMPLES;
 
-  const angles = size < 32 ? [0, Math.PI / 2] : [0, Math.PI / 3, (2 * Math.PI) / 3];
-  const showElectrons = size >= 48;
+  const rows = size >= 48 ? 3 : 2;
+  const cols = 2;
+  // Cell block sits in the ribbon's upper part, above the notch.
+  const bx0 = size * (size >= 48 ? 0.29 : 0.28);
+  const bx1 = size - bx0;
+  const by0 = size * 0.18;
+  const by1 = size * (size >= 48 ? 0.64 : 0.6);
+  const gut = Math.max(1, size * (size >= 48 ? 0.035 : 0.06));
 
-  const a = size * 0.395;
-  const b = size * (size < 32 ? 0.16 : 0.152);
-  const stroke = Math.max(0.55, size * 0.021);
-  const nucleusRadius = size * (size < 32 ? 0.155 : 0.125);
-  const electronRadius = Math.max(1, size * 0.058);
-  const halo = Math.max(0.9, size * 0.032);
-
-  const electrons = showElectrons
-    ? angles.map((angle, index) => {
-        const t = index === 1 ? Math.PI : 0;
-        const u = a * Math.cos(t);
-        const v = b * Math.sin(t);
-        return [
-          centre + u * Math.cos(angle) - v * Math.sin(angle),
-          centre + u * Math.sin(angle) + v * Math.cos(angle),
-        ];
-      })
-    : [];
+  const cellAt = (x, y) => {
+    if (x < bx0 || x > bx1 || y < by0 || y > by1) return false;
+    const cw = (bx1 - bx0) / cols;
+    const ch = (by1 - by0) / rows;
+    const inX = (x - bx0) % cw;
+    const inY = (y - by0) % ch;
+    return inX > gut / 2 && cw - inX > gut / 2 && inY > gut / 2 && ch - inY > gut / 2;
+  };
 
   for (let py = 0; py < size; py += 1) {
     for (let px = 0; px < size; px += 1) {
@@ -168,21 +161,9 @@ function renderIcon(size) {
           const y = py + (sy + 0.5) / SAMPLES;
           if (!insideRoundedSquare(x, y, size)) continue;
 
-          const dx = x - centre;
-          const dy = y - centre;
-          const fromCentre = Math.hypot(dx, dy);
           let colour = lerp(NAVY_TOP, NAVY_BOTTOM, (x + y) / (2 * size));
-
-          if (fromCentre <= nucleusRadius) {
-            colour = NUCLEUS;
-          } else if (fromCentre > nucleusRadius + halo) {
-            const electron = electrons.find(([ex, ey]) => Math.hypot(x - ex, y - ey) <= electronRadius + halo);
-            if (electron) {
-              // The halo lets orbits pass visually behind each electron.
-              if (Math.hypot(x - electron[0], y - electron[1]) <= electronRadius) colour = ELECTRON;
-            } else if (angles.some((angle) => distanceToEllipse(dx, dy, a, b, angle) <= stroke)) {
-              colour = ORBIT;
-            }
+          if (insideRibbon(x, y, size)) {
+            colour = cellAt(x, y) ? CELL : lerp(RIBBON_TOP, RIBBON_BOTTOM, y / size);
           }
 
           red += colour[0];
@@ -193,12 +174,11 @@ function renderIcon(size) {
       }
 
       if (alpha === 0) continue;
-
       const offset = (py * size + px) * 4;
       rgba[offset] = Math.round(red / alpha);
       rgba[offset + 1] = Math.round(green / alpha);
       rgba[offset + 2] = Math.round(blue / alpha);
-      rgba[offset + 3] = Math.round((alpha / (SAMPLES * SAMPLES)) * 255);
+      rgba[offset + 3] = Math.round((alpha / total) * 255);
     }
   }
 
@@ -236,10 +216,23 @@ for (const [target, overrides] of Object.entries(TARGETS)) {
 
   if (!forStore) continue;
 
+  // Stores assign extension ids themselves and reject a NEW item whose manifest carries
+  // `key` — so the archive is packed from a staging copy with the key removed, leaving
+  // the dist folder (and its pinned id) untouched for unpacked loading.
+  let zipSource = out;
+  if (manifest.key) {
+    const stage = path.join(dist, `.stage-${target}`);
+    await cp(out, stage, { recursive: true });
+    const { key, ...storeManifest } = manifest;
+    await writeFile(path.join(stage, 'manifest.json'), `${JSON.stringify(storeManifest, null, 2)}\n`);
+    zipSource = stage;
+  }
+
   const archive = path.join(dist, `${pkg.name}-${target}-${pkg.version}.zip`);
-  if (spawnSync('zip', ['-qr', archive, '.'], { cwd: out, stdio: 'inherit' }).status !== 0) {
+  if (spawnSync('zip', ['-qr', archive, '.'], { cwd: zipSource, stdio: 'inherit' }).status !== 0) {
     throw new Error(`zip failed for ${target}`);
   }
+  if (zipSource !== out) await rm(zipSource, { recursive: true, force: true });
   console.log(`Packed ${path.relative(root, archive)}`);
 }
 

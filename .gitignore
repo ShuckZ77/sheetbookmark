@@ -2,6 +2,22 @@ dist/
 node_modules/
 .DS_Store
 
-# The private signing key stays local. The public manifest key and derived id are
-# committed so builds are reproducible and the extension id is stable.
+# --- Secrets: must never reach the public repo -------------------------------
+# The extension-signing private key (pins the dev extension id).
 .keys/extension-key.pem
+# Any private key, anywhere, ever.
+*.pem
+*.key
+# The OAuth client JSON Google offers for download — it contains client_secret.
+# We never use the secret (implicit flow), but it must not be published either.
+client_secret*.json
+*credentials*.json
+.env
+.env.*
+
+# --- Deliberately PUBLIC files in .keys/ (safe to commit) --------------------
+# .keys/manifest-key.txt   – the PUBLIC key; ships inside every dev build anyway
+# .keys/extension-id.txt   – derived from the public key; visible in chrome://extensions
+# .keys/client-id.txt      – OAuth client ID; public by design, ships inside every
+#                            built extension and is readable by anyone who unzips a
+#                            store package. Committing it keeps builds reproducible.
