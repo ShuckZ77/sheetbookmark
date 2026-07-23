@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SheetBookmark vs Raindrop, Pocket, Toby & browser sync — bookmark manager comparison 2026</title>
-<meta name="description" content="Honest comparison of ways to sync and manage bookmarks in 2026: SheetBookmark, Raindrop.io, Pocket (discontinued), Toby, and browser built-in sync — data ownership, cross-browser support, price, open source." />
+<title>SheetBookmark vs floccus, Raindrop, Pocket & browser sync — bookmark manager comparison 2026</title>
+<meta name="description" content="Honest comparison of ways to sync and manage bookmarks in 2026: SheetBookmark, floccus, Raindrop.io, Pocket (discontinued), and browser built-in sync — data ownership, cross-browser support, price, open source." />
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%23047857" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="%23fdfcf9"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>' />
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"What is a good Pocket alternative after Pocket shut down?","acceptedAnswer":{"@type":"Answer","text":"Pocket was discontinued in July 2025. SheetBookmark is a free, open-source alternative for saving pages with notes — it stores everything in a Google Sheet in your own Drive, so a service shutdown can never take your collection with it."}},
 {"@type":"Question","name":"Is SheetBookmark a Raindrop.io alternative?","acceptedAnswer":{"@type":"Answer","text":"They solve the same problem with opposite philosophies. Raindrop is a polished cloud service that stores bookmarks on its servers; SheetBookmark has no server at all — bookmarks live in a Google Sheet in your own Drive, one tab per browser, under the AGPL open-source license."}},
 {"@type":"Question","name":"Why not just use Chrome or Firefox built-in sync?","acceptedAnswer":{"@type":"Answer","text":"Built-in sync only syncs a browser with itself — Chrome to Chrome, Firefox to Firefox. SheetBookmark syncs across browser brands (Chrome, Firefox, Edge, Brave, Vivaldi) into one spreadsheet you own, searchable from any of them."}}
-]}
+,
+{"@type":"Question","name":"SheetBookmark vs floccus — which should I use?","acceptedAnswer":{"@type":"Answer","text":"Both are open source with no vendor server. floccus mirrors your native bookmark tree two-way across browsers into a backend you configure (Nextcloud, WebDAV, Google Drive, Git). SheetBookmark writes an append-only Google Sheet in your own Drive — sortable, annotatable, one tab per browser, zero backend setup. Choose floccus for tree mirroring, SheetBookmark for a usable spreadsheet ledger."}},
+{"@type":"Question","name":"What are good open-source or self-hosted bookmark managers?","acceptedAnswer":{"@type":"Answer","text":"floccus (browser-tree sync, bring-your-own backend), Linkwarden (self-hosted, full-featured, archiving), Karakeep (self-hosted with AI tagging), Linkding (minimal self-hosted), and SheetBookmark (no server at all — your bookmarks as a Google Sheet in your own Drive)."}}]}
 </script>
 <style>
 :root{
@@ -95,7 +97,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
     <button class="chip on" data-cols="all">All</button>
     <button class="chip" data-cols="raindrop">vs Raindrop.io</button>
     <button class="chip" data-cols="pocket">vs Pocket</button>
-    <button class="chip" data-cols="toby">vs Toby</button>
+    <button class="chip" data-cols="floccus">vs floccus</button>
     <button class="chip" data-cols="sync">vs browser sync</button>
   </div>
 
@@ -105,7 +107,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
       <th class="us">SheetBookmark</th>
       <th data-c="raindrop">Raindrop.io</th>
       <th data-c="pocket" class="dead">Pocket <span class="m">(discontinued 2025)</span></th>
-      <th data-c="toby">Toby</th>
+      <th data-c="floccus">floccus</th>
       <th data-c="sync">Browser built-in sync</th>
     </tr></thead>
     <tbody>
@@ -113,61 +115,73 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
         <td class="us"><span class="y">A Google Sheet in your own Drive</span></td>
         <td data-c="raindrop">Raindrop's cloud servers</td>
         <td data-c="pocket" class="dead">Service shut down — data export ended 2025</td>
-        <td data-c="toby">Toby's cloud servers</td>
+        <td data-c="floccus">A backend you pick: Nextcloud, WebDAV, Google Drive, Git…</td>
         <td data-c="sync">Browser vendor's sync service</td></tr>
       <tr><th>Works across browser brands<br><span class="m">(Chrome ⇄ Firefox ⇄ Edge)</span></th>
         <td class="us"><span class="y">✔</span> one sheet, a tab per browser</td>
         <td data-c="raindrop"><span class="y">✔</span> via its apps &amp; extensions</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby"><span class="y">✔</span> extensions for major browsers</td>
+        <td data-c="floccus"><span class="y">✔</span> Chrome, Firefox, Edge</td>
         <td data-c="sync"><span class="n">✖</span> same brand only</td></tr>
       <tr><th>Data as an open file<br><span class="m">(sort, filter, formulas, export)</span></th>
         <td class="us"><span class="y">✔</span> it <i>is</i> a spreadsheet</td>
         <td data-c="raindrop">export/backup features</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby">limited export</td>
+        <td data-c="floccus"><span class="n">✖</span> sync-format file — not meant to be opened</td>
         <td data-c="sync"><span class="n">✖</span> HTML export only, manual</td></tr>
       <tr><th>Survives the service shutting down</th>
         <td class="us"><span class="y">✔</span> no service exists to shut down</td>
         <td data-c="raindrop">depends on the company</td>
         <td data-c="pocket" class="dead"><span class="n">✖</span> — it happened</td>
-        <td data-c="toby">depends on the company</td>
+        <td data-c="floccus"><span class="y">✔</span> no vendor server</td>
         <td data-c="sync">tied to vendor account</td></tr>
       <tr><th>New account required</th>
         <td class="us"><span class="y">None</span> — uses your existing Google sign-in</td>
         <td data-c="raindrop">yes</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby">yes</td>
+        <td data-c="floccus">depends on backend (e.g. Nextcloud)</td>
         <td data-c="sync">browser vendor account</td></tr>
       <tr><th>Price</th>
         <td class="us"><span class="y">Free, forever</span> — nothing to upsell</td>
         <td data-c="raindrop">freemium; Pro subscription</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby">freemium; paid teams</td>
+        <td data-c="floccus"><span class="y">Free</span></td>
         <td data-c="sync">free</td></tr>
       <tr><th>Open source</th>
         <td class="us"><span class="y">✔</span> AGPL-3.0, full source</td>
         <td data-c="raindrop">service is proprietary</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby"><span class="n">✖</span></td>
+        <td data-c="floccus"><span class="y">✔</span> fully open source</td>
         <td data-c="sync"><span class="m">browser-dependent</span></td></tr>
       <tr><th>Notes on bookmarks</th>
         <td class="us"><span class="y">✔</span> pre-filled from your highlight; editable from any browser or the sheet</td>
         <td data-c="raindrop"><span class="y">✔</span> notes &amp; highlights</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby">limited</td>
+        <td data-c="floccus"><span class="n">✖</span> syncs the tree, no notes</td>
         <td data-c="sync"><span class="n">✖</span></td></tr>
       <tr><th>Which browser saved what</th>
         <td class="us"><span class="y">✔</span> separate tab per browser + profile labels</td>
         <td data-c="raindrop"><span class="n">✖</span> unified list</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby">workspace-based</td>
+        <td data-c="floccus"><span class="n">✖</span> one merged tree</td>
         <td data-c="sync"><span class="n">✖</span> merged</td></tr>
+      <tr><th>True two-way sync<br><span class="m">(deletions propagate)</span></th>
+        <td class="us"><span class="n">✖</span> deliberate — append-only log; a sync bug can never mass-delete your bookmarks</td>
+        <td data-c="raindrop">within its own apps</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="floccus"><span class="y">✔</span> full tree mirror</td>
+        <td data-c="sync"><span class="y">✔</span> within one brand</td></tr>
+      <tr><th>End-to-end encryption option</th>
+        <td class="us"><span class="n">✖</span> the sheet is readable by design — it <i>is</i> the interface</td>
+        <td data-c="raindrop"><span class="n">✖</span></td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="floccus"><span class="y">✔</span> optional</td>
+        <td data-c="sync"><span class="m">browser-dependent</span></td></tr>
       <tr><th>Automatable<br><span class="m">(formulas, Apps Script, exports)</span></th>
         <td class="us"><span class="y">✔</span> the whole Sheets ecosystem</td>
         <td data-c="raindrop">API (paid tiers for some uses)</td>
         <td data-c="pocket" class="dead">—</td>
-        <td data-c="toby"><span class="n">✖</span></td>
+        <td data-c="floccus"><span class="m">limited (Git backend)</span></td>
         <td data-c="sync"><span class="n">✖</span></td></tr>
     </tbody>
   </table></div>
@@ -175,10 +189,21 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
 
   <a class="cta" href="./#get">Get SheetBookmark — free</a>
 
+  <section id="opensource">
+    <h2>The open-source landscape — when to choose them instead</h2>
+    <p class="sub" style="margin-bottom:18px">SheetBookmark isn't the right tool for everyone. Honest pointers:</p>
+    <details><summary>floccus — true two-way sync of your bookmark tree</summary><p>If what you want is your <em>native bookmark tree</em> mirrored perfectly across browsers — deletions and all — <a href="https://floccus.org/">floccus</a> does that and we deliberately don't. Choose floccus for tree mirroring with your own backend (Nextcloud, WebDAV, Drive, Git) and optional end-to-end encryption; choose SheetBookmark when you want the destination to be a usable, sortable, annotatable spreadsheet with zero backend setup.</p></details>
+    <details><summary>Linkwarden — self-hosted, full-featured, collaborative</summary><p>The closest open-source answer to Raindrop: collections, full-page archiving, annotation, teams — if you're comfortable <a href="https://github.com/linkwarden/linkwarden">running your own server</a>. Choose it when you want archival copies of pages and run Docker without blinking; choose SheetBookmark when you want zero infrastructure.</p></details>
+    <details><summary>Karakeep — self-hosted with AI tagging</summary><p>Automation-heavy self-hosted bookmarking (rule engines, AI tagging) for people who treat their library as a serious research workflow — and are happy to host it. Different effort budget entirely.</p></details>
+    <details><summary>Linkding — minimal self-hosted bookmarking</summary><p>The lightweight classic: fast, simple, reliable, easiest Docker setup of the class. Choose it for a minimal personal server tool; choose SheetBookmark if "server" isn't in your vocabulary.</p></details>
+    <p class="note">Also notable: <b>Toby</b> — a polished tab/workspace manager (closed source, cloud-based); a different job than bookmark syncing, which is why it left this matrix.</p>
+  </section>
+
   <section id="faq">
     <h2>Common questions</h2>
     <details><summary>What is a good Pocket alternative now that Pocket shut down?</summary><p>Pocket was discontinued in July 2025, taking saved collections with it. SheetBookmark is a free, open-source alternative for saving pages with notes — and because everything lives in a Google Sheet in <em>your own</em> Drive, no shutdown can ever take your collection away. There is no service to shut down.</p></details>
     <details><summary>Is SheetBookmark a Raindrop.io alternative?</summary><p>They solve the same problem with opposite philosophies. Raindrop is an excellent polished cloud service — your bookmarks live on its servers, with its apps as the interface. SheetBookmark has no server: bookmarks live in a spreadsheet you own, the interface is any browser plus Google Sheets itself, and the code is AGPL open source. Pick cloud polish, or pick ownership.</p></details>
+    <details><summary>SheetBookmark vs floccus — which should I use?</summary><p>Both are open source with no vendor server. floccus mirrors your native bookmark tree across browsers (two-way, deletions included) into a sync backend you configure. SheetBookmark writes an append-only, human-usable ledger — a Google Sheet with notes, per-browser tabs and formulas — with zero setup. Mirroring plumbing vs. usable ledger: pick by which you want your data to <em>be</em>.</p></details>
     <details><summary>Why not just use Chrome or Firefox built-in sync?</summary><p>Built-in sync only syncs a browser with itself — Chrome to Chrome, Firefox to Firefox. If you live in one browser ecosystem it's great. SheetBookmark exists for everyone else: it syncs bookmarks across Chrome, Firefox, Edge, Brave and Vivaldi into one searchable spreadsheet, with notes, that you keep forever.</p></details>
     <details><summary>How do I export bookmarks to Google Sheets automatically?</summary><p>That is literally what SheetBookmark does: press Ctrl+D (or click the toolbar button) and the bookmark appears as a row in your sheet within seconds — title, URL, folder, note, timestamp, and which browser saved it. No manual export step exists because there is nothing to export: the sheet is the storage.</p></details>
   </section>
