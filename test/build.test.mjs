@@ -29,4 +29,12 @@ test('the dist folder keeps the pinned key even when --zip runs, and the archive
   assert.equal(zipped.key, undefined, 'store archives must not carry a key — stores assign the id');
 
   assert.ok(!existsSync(path.join(root, 'dist/.stage-chrome')), 'staging copy is cleaned up');
+
+  const firefox = JSON.parse(readFileSync(path.join(root, 'dist/firefox/manifest.json'), 'utf8'));
+  const collection = firefox.browser_specific_settings?.gecko?.data_collection_permissions;
+  assert.deepEqual(
+    collection,
+    { required: ['bookmarksInfo', 'websiteContent'] },
+    'AMO rejects new submissions without an honest data_collection_permissions declaration',
+  );
 });

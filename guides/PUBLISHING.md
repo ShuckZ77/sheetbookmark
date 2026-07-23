@@ -84,10 +84,13 @@ Google renamed the old "OAuth consent screen" — it's now **Google Auth Platfor
    is `getAuthToken`-only, which Firefox lacks). Add redirect URIs:
    - `https://lmkchpbfpmencebnadolcfpchmfcnapg.chromiumapp.org/` (dev builds: Chrome **and** Edge
      unpacked, ID pinned by the manifest key)
-   - Firefox loopback: build with no client ID, load `dist/firefox` in Firefox, open options — the
-     **Publisher setup** card shows the exact `http://127.0.0.1/mozoauth2/<hash>` value. (Google
-     rejects Firefox's real `extensions.allizom.org` URL — you'd have to prove you own Mozilla's
-     domain; the loopback is Mozilla's official workaround, Firefox intercepts it, nothing listens.)
+   - Firefox loopback: load `dist/firefox` via `about:debugging#/runtime/this-firefox` → click
+     **Inspect** on the extension → in its console run `browser.identity.getRedirectURL()`. It
+     returns `https://<hash>.extensions.allizom.org/`; register `http://127.0.0.1/mozoauth2/<hash>`
+     (that first label, before the dot). (Google rejects the `allizom.org` form — you'd have to
+     prove you own Mozilla's domain; the loopback is Mozilla's official workaround, Firefox
+     intercepts it, nothing listens. In un-baked builds the options page's Publisher-setup card
+     shows the converted value directly.)
    - You'll append one more URI per store in Steps 5–6.
 6. *Audience* → **Publish app → In production**. Because `drive.file` is non-sensitive: **no
    verification, no "unverified app" warning, no user cap.** (Optional, later: *brand verification*
@@ -166,12 +169,12 @@ Firefox).
 2. Channel: **Listed on this site** (that's the public showcase; "self-distribution" is for
    privately hosted signed builds).
 3. Upload `dist/bookmark-sheet-sync-firefox-<version>.zip`.
-4. Source code: our build is plain, unbundled, unminified — answer **no** to "does your submission
+5. Source code: our build is plain, unbundled, unminified — answer **no** to "does your submission
    require source code?"; no upload needed.
-5. Listing: name, summary, description, icon, screenshots, category (e.g. *Bookmarks*), privacy
+6. Listing: name, summary, description, icon, screenshots, category (e.g. *Bookmarks*), privacy
    policy URL.
-6. Submit. Auto-signing usually completes in **~24 h**; manual review, if selected, takes longer.
-7. Nothing OAuth-related changes: the published add-on keeps the pinned `gecko.id`, so the loopback
+7. Submit. Auto-signing usually completes in **~24 h**; manual review, if selected, takes longer.
+8. Nothing OAuth-related changes: the published add-on keeps the pinned `gecko.id`, so the loopback
    redirect URI you registered in Step 2 already works. ✅ Live.
 
 ## Step 5 — Edge (Partner Center) — free, do second

@@ -44,7 +44,17 @@ const TARGETS = {
   firefox: {
     background: { scripts: ['background.js'], type: 'module' },
     browser_specific_settings: {
-      gecko: { id: 'bookmark-sheet-sync@local', strict_min_version: '115.0' },
+      gecko: {
+        id: 'bookmark-sheet-sync@local',
+        strict_min_version: '115.0',
+        // Mozilla's built-in data-consent (required for new AMO submissions). Honest
+        // declaration under their definition ("anything transmitted outside the local
+        // browser"): bookmark records + the page-content note go to the USER'S OWN
+        // Google Sheet. Nothing ever reaches the developer.
+        data_collection_permissions: {
+          required: ['bookmarksInfo', 'websiteContent'],
+        },
+      },
     },
   },
 };

@@ -7,8 +7,9 @@ Do this before publishing anywhere. One machine is enough.
 1. OAuth client exists (see [PUBLISHING.md](PUBLISHING.md) §2) with these redirect URIs registered:
    - `https://lmkchpbfpmencebnadolcfpchmfcnapg.chromiumapp.org/` — covers Chrome **and** Edge
      unpacked builds, because the dev build pins the extension ID via the manifest `key`.
-   - The Firefox loopback URI (`http://127.0.0.1/mozoauth2/<hash>`) — read it from the extension's
-     options page in Firefox while no client ID is baked (the "Publisher setup" card).
+   - The Firefox loopback URI (`http://127.0.0.1/mozoauth2/<hash>`) — load `dist/firefox` via
+     `about:debugging`, click **Inspect**, run `browser.identity.getRedirectURL()` in the console,
+     and take the first label of the returned hostname as `<hash>`.
 2. Client ID baked: `echo "YOUR-ID.apps.googleusercontent.com" > .keys/client-id.txt`
 3. Build: `npm run build`
 4. If your OAuth app is still in **Testing** status, add your Google account as a test user.
