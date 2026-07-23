@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
 .sw-formula .fx{font-style:italic;font-weight:700;color:var(--ink-faint);font-size:12px}
 .sw-formula code{font-size:12.5px;color:var(--green);background:none}
 .sw-scroll{overflow-x:auto}
-.sw-grid{border-collapse:collapse;width:100%;font-size:13.5px}
+.sw-grid{border-collapse:collapse;width:100%;font-size:13.5px;table-layout:fixed;min-width:820px}
 .sw-grid th,.sw-grid td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 13px;text-align:left;vertical-align:top}
 .sw-grid tr.letters th{background:#f2f5fa;color:var(--ink-faint);font-size:10.5px;font-weight:600;text-align:center;padding:3px}
 .sw-grid th.rn{background:#f2f5fa;color:var(--ink-faint);font-size:10.5px;font-weight:600;text-align:center;width:30px;padding:3px}
@@ -92,7 +92,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
 .sw-grid tr.names th.us{background:var(--green-soft);color:var(--green)}
 .sw-grid tr.names th.dead{color:var(--ink-faint)}
 .sw-grid th.feat{font-weight:600;color:var(--ink);background:var(--paper);font-size:12.5px;min-width:150px}
-.sw-grid td.cell{color:var(--ink-soft);position:relative;min-width:120px;white-space:nowrap}
+.sw-grid td.cell{color:var(--ink-soft);position:relative}
 .sw-grid td.cell.us{background:var(--green-soft);color:var(--ink);font-weight:550}
 .sw-grid td.t-y{color:var(--green);font-weight:650}
 .sw-grid td.us.t-y{color:var(--green)}
@@ -269,7 +269,9 @@ function cellHtml(cell, isUs) {
 
 function render(view) {
   const rows = COMP.rows.filter((r) => !view.ov || r.ov);
-  let html = '<tr class="letters"><th></th><th>A</th>' +
+  let html = `<colgroup><col style="width:34px"><col style="width:186px">` +
+    view.cols.map(() => '<col>').join('') + '</colgroup>';
+  html += '<tr class="letters"><th class="rn"></th><th>A</th>' +
     view.cols.map((_, i) => `<th>${LETTERS[i + 1]}</th>`).join('') + '</tr>';
   html += '<tr class="names"><th class="rn">1</th><th>Feature</th>' +
     view.cols.map((c) => `<th class="${c === 'us' ? 'us' : ''} ${c === 'pocket' ? 'dead' : ''}">${COMP.cols[c]}</th>`).join('') + '</tr>';
