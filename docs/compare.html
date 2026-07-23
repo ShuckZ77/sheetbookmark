@@ -75,6 +75,40 @@ details p{margin-top:10px;font-size:14.5px;color:var(--ink-soft)}
 .cta:hover{text-decoration:none;background:#059669}
 footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color:var(--ink-faint);background:var(--card)}
 .hidden{display:none}
+/* --- spreadsheet component --- */
+.sheetwin{background:var(--card);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 18px 44px rgba(26,45,79,.1);overflow:hidden}
+.sw-title{display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:1px solid var(--line);font-weight:650;font-size:13.5px}
+.sw-title svg{width:16px;height:16px;color:var(--green)}
+.sw-title .m{color:var(--ink-faint);font-weight:450}
+.sw-formula{display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid var(--line);background:var(--paper)}
+.sw-formula .fx{font-style:italic;font-weight:700;color:var(--ink-faint);font-size:12px}
+.sw-formula code{font-size:12.5px;color:var(--green);background:none}
+.sw-scroll{overflow-x:auto}
+.sw-grid{border-collapse:collapse;width:100%;font-size:13.5px}
+.sw-grid th,.sw-grid td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 13px;text-align:left;vertical-align:top}
+.sw-grid tr.letters th{background:#f2f5fa;color:var(--ink-faint);font-size:10.5px;font-weight:600;text-align:center;padding:3px}
+.sw-grid th.rn{background:#f2f5fa;color:var(--ink-faint);font-size:10.5px;font-weight:600;text-align:center;width:30px;padding:3px}
+.sw-grid tr.names th{background:var(--blue-soft);color:var(--blue);font-size:12.5px;white-space:nowrap}
+.sw-grid tr.names th.us{background:var(--green-soft);color:var(--green)}
+.sw-grid tr.names th.dead{color:var(--ink-faint)}
+.sw-grid th.feat{font-weight:600;color:var(--ink);background:var(--paper);font-size:12.5px;min-width:150px}
+.sw-grid td.cell{color:var(--ink-soft);position:relative;min-width:120px;white-space:nowrap}
+.sw-grid td.cell.us{background:var(--green-soft);color:var(--ink);font-weight:550}
+.sw-grid td.t-y{color:var(--green);font-weight:650}
+.sw-grid td.us.t-y{color:var(--green)}
+.sw-grid td.t-n{color:#be123c}
+.sw-grid td.t-d{color:var(--ink-faint);font-style:italic}
+.sw-grid tr:hover td,.sw-grid tr:hover th.feat{background:#f6f9ff}
+.sw-grid tr:hover td.us{background:#e0f0e8}
+.has-note::after{content:"";position:absolute;top:0;right:0;border:5px solid transparent;border-top-color:var(--green);border-right-color:var(--green)}
+.tip{display:none;position:absolute;z-index:5;left:12px;top:calc(100% - 4px);width:240px;background:#1a2d4f;color:#fff;font-size:12px;font-weight:450;line-height:1.5;padding:9px 12px;border-radius:8px;box-shadow:0 10px 26px rgba(26,45,79,.35);white-space:normal}
+.has-note:hover .tip{display:block}
+.sw-grid tr.verdict td{white-space:normal;font-size:12.5px;min-width:220px}
+.sw-grid tr.verdict th.feat{color:var(--green)}
+.sw-tabs{display:flex;gap:2px;padding:6px 10px;border-top:1px solid var(--line);background:#f2f5fa;overflow-x:auto}
+.sw-tab{font:inherit;font-size:12.5px;font-weight:600;padding:6px 14px;border:1px solid transparent;border-radius:7px 7px 0 0;background:none;color:var(--ink-faint);cursor:pointer;white-space:nowrap}
+.sw-tab:hover{color:var(--blue)}
+.sw-tab.on{background:var(--card);color:var(--green);border-color:var(--line);border-bottom-color:var(--card)}
 </style>
 </head>
 <body>
@@ -89,103 +123,22 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
 
 <header class="wrap">
   <h1>How does SheetBookmark compare?</h1>
-  <p class="sub">An honest feature matrix against the popular ways people manage bookmarks in 2026. Every cell reflects publicly documented behavior — if you spot an error, <a href="https://github.com/ShuckZ77/sheetbookmark/issues">open an issue</a> and we'll fix it. Accuracy over marketing.</p>
+  <p class="sub">An honest feature matrix against the popular ways people manage bookmarks in 2026. Every cell reflects publicly documented behavior — if you spot an error, <a href="https://github.com/ShuckZ77/sheetbookmark/issues">open an issue</a> and we'll fix it. Accuracy over marketing. <span class="m">† Pocket was discontinued in July 2025.</span></p>
 </header>
 
 <main class="wrap">
-  <div class="chips" role="tablist" aria-label="Choose comparison">
-    <button class="chip on" data-cols="all">All</button>
-    <button class="chip" data-cols="raindrop">vs Raindrop.io</button>
-    <button class="chip" data-cols="pocket">vs Pocket</button>
-    <button class="chip" data-cols="floccus">vs floccus</button>
-    <button class="chip" data-cols="sync">vs browser sync</button>
+  <div class="sheetwin" id="sheetwin">
+    <div class="sw-title">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/></svg>
+      bookmark-managers-compared&nbsp;<span class="m">— honest matrix, spreadsheet-style</span>
+    </div>
+    <div class="sw-formula"><span class="fx">fx</span><code id="fxbar">=COMPARE("Overview")</code></div>
+    <div class="sw-scroll"><table class="sw-grid" id="grid"></table></div>
+    <div class="sw-tabs" id="tabs"></div>
   </div>
-
-  <div class="tablewrap"><table id="cmp">
-    <thead><tr>
-      <th></th>
-      <th class="us">SheetBookmark</th>
-      <th data-c="raindrop">Raindrop.io</th>
-      <th data-c="pocket" class="dead">Pocket <span class="m">(discontinued 2025)</span></th>
-      <th data-c="floccus">floccus</th>
-      <th data-c="sync">Browser built-in sync</th>
-    </tr></thead>
-    <tbody>
-      <tr><th>Where your data lives</th>
-        <td class="us"><span class="y">A Google Sheet in your own Drive</span></td>
-        <td data-c="raindrop">Raindrop's cloud servers</td>
-        <td data-c="pocket" class="dead">Service shut down — data export ended 2025</td>
-        <td data-c="floccus">A backend you pick: Nextcloud, WebDAV, Google Drive, Git…</td>
-        <td data-c="sync">Browser vendor's sync service</td></tr>
-      <tr><th>Works across browser brands<br><span class="m">(Chrome ⇄ Firefox ⇄ Edge)</span></th>
-        <td class="us"><span class="y">✔</span> one sheet, a tab per browser</td>
-        <td data-c="raindrop"><span class="y">✔</span> via its apps &amp; extensions</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="y">✔</span> Chrome, Firefox, Edge</td>
-        <td data-c="sync"><span class="n">✖</span> same brand only</td></tr>
-      <tr><th>Data as an open file<br><span class="m">(sort, filter, formulas, export)</span></th>
-        <td class="us"><span class="y">✔</span> it <i>is</i> a spreadsheet</td>
-        <td data-c="raindrop">export/backup features</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="n">✖</span> sync-format file — not meant to be opened</td>
-        <td data-c="sync"><span class="n">✖</span> HTML export only, manual</td></tr>
-      <tr><th>Survives the service shutting down</th>
-        <td class="us"><span class="y">✔</span> no service exists to shut down</td>
-        <td data-c="raindrop">depends on the company</td>
-        <td data-c="pocket" class="dead"><span class="n">✖</span> — it happened</td>
-        <td data-c="floccus"><span class="y">✔</span> no vendor server</td>
-        <td data-c="sync">tied to vendor account</td></tr>
-      <tr><th>New account required</th>
-        <td class="us"><span class="y">None</span> — uses your existing Google sign-in</td>
-        <td data-c="raindrop">yes</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus">depends on backend (e.g. Nextcloud)</td>
-        <td data-c="sync">browser vendor account</td></tr>
-      <tr><th>Price</th>
-        <td class="us"><span class="y">Free, forever</span> — nothing to upsell</td>
-        <td data-c="raindrop">freemium; Pro subscription</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="y">Free</span></td>
-        <td data-c="sync">free</td></tr>
-      <tr><th>Open source</th>
-        <td class="us"><span class="y">✔</span> AGPL-3.0, full source</td>
-        <td data-c="raindrop">service is proprietary</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="y">✔</span> fully open source</td>
-        <td data-c="sync"><span class="m">browser-dependent</span></td></tr>
-      <tr><th>Notes on bookmarks</th>
-        <td class="us"><span class="y">✔</span> pre-filled from your highlight; editable from any browser or the sheet</td>
-        <td data-c="raindrop"><span class="y">✔</span> notes &amp; highlights</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="n">✖</span> syncs the tree, no notes</td>
-        <td data-c="sync"><span class="n">✖</span></td></tr>
-      <tr><th>Which browser saved what</th>
-        <td class="us"><span class="y">✔</span> separate tab per browser + profile labels</td>
-        <td data-c="raindrop"><span class="n">✖</span> unified list</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="n">✖</span> one merged tree</td>
-        <td data-c="sync"><span class="n">✖</span> merged</td></tr>
-      <tr><th>True two-way sync<br><span class="m">(deletions propagate)</span></th>
-        <td class="us"><span class="n">✖</span> deliberate — append-only log; a sync bug can never mass-delete your bookmarks</td>
-        <td data-c="raindrop">within its own apps</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="y">✔</span> full tree mirror</td>
-        <td data-c="sync"><span class="y">✔</span> within one brand</td></tr>
-      <tr><th>End-to-end encryption option</th>
-        <td class="us"><span class="n">✖</span> the sheet is readable by design — it <i>is</i> the interface</td>
-        <td data-c="raindrop"><span class="n">✖</span></td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="y">✔</span> optional</td>
-        <td data-c="sync"><span class="m">browser-dependent</span></td></tr>
-      <tr><th>Automatable<br><span class="m">(formulas, Apps Script, exports)</span></th>
-        <td class="us"><span class="y">✔</span> the whole Sheets ecosystem</td>
-        <td data-c="raindrop">API (paid tiers for some uses)</td>
-        <td data-c="pocket" class="dead">—</td>
-        <td data-c="floccus"><span class="m">limited (Git backend)</span></td>
-        <td data-c="sync"><span class="n">✖</span></td></tr>
-    </tbody>
-  </table></div>
-  <p class="note">Comparison reflects publicly documented behavior as of July 2026. Products evolve — corrections are welcome and applied fast: <a href="https://github.com/ShuckZ77/sheetbookmark/issues">report an inaccuracy</a>.</p>
+  <p class="note">Terse on purpose — hover any cell with a green corner for the full story, exactly like a
+  sheet note. Reflects publicly documented behavior as of July 2026;
+  <a href="https://github.com/ShuckZ77/sheetbookmark/issues">report an inaccuracy</a>.</p>
 
   <a class="cta" href="./#get">Get SheetBookmark — free</a>
 
@@ -214,15 +167,143 @@ footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color
 </div></footer>
 
 <script>
-(() => {
-  const chips = document.querySelectorAll('.chip');
-  const cells = document.querySelectorAll('[data-c]');
-  chips.forEach((chip) => chip.addEventListener('click', () => {
-    chips.forEach((c) => c.classList.toggle('on', c === chip));
-    const pick = chip.dataset.cols;
-    cells.forEach((cell) => cell.classList.toggle('hidden', pick !== 'all' && cell.dataset.c !== pick));
-  }));
-})();
+const COMP = {
+  cols: { us: 'SheetBookmark', floccus: 'floccus', raindrop: 'Raindrop.io', pocket: 'Pocket †', sync: 'Browser sync' },
+  rows: [
+    { k:'live',  label:'Your data lives in', ov:true,
+      us:{v:'Your own Google Drive',t:'y',n:'A normal Google Sheet in the user\u2019s Drive. No SheetBookmark server exists.'},
+      floccus:{v:'Backend you pick',t:'m',n:'Nextcloud, WebDAV, Google Drive, Dropbox or Git \u2014 you configure it.'},
+      raindrop:{v:'Their cloud',t:'m',n:'Raindrop\u2019s servers, accessed through its apps.'},
+      pocket:{v:'\u2014',t:'d',n:'Service discontinued in July 2025.'},
+      sync:{v:'Vendor cloud',t:'m',n:'Google/Mozilla/Microsoft sync infrastructure, tied to the browser account.'} },
+    { k:'brands', label:'Chrome \u21c4 Firefox \u21c4 Edge', ov:true,
+      us:{v:'\u2714',t:'y',n:'One sheet; each browser writes its own tab.'},
+      floccus:{v:'\u2714',t:'y',n:'Extensions for Chrome, Firefox and Edge.'},
+      raindrop:{v:'\u2714',t:'y',n:'Via its apps and extensions.'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2716',t:'n',n:'Only syncs a browser brand with itself.'} },
+    { k:'file', label:'Data is a usable file', ov:true,
+      us:{v:'\u2714 a spreadsheet',t:'y',n:'Sort, filter, formulas, export \u2014 the storage IS the interface.'},
+      floccus:{v:'\u2716',t:'n',n:'Sync-format file/backend, not meant to be opened by humans.'},
+      raindrop:{v:'Export only',t:'m',n:'Backup/export features from their apps.'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2716',t:'n',n:'Manual HTML export at best.'} },
+    { k:'shutdown', label:'Survives a shutdown', ov:true,
+      us:{v:'\u2714',t:'y',n:'No service exists to shut down; the sheet outlives everything.'},
+      floccus:{v:'\u2714',t:'y',n:'No vendor server \u2014 same philosophy as SheetBookmark.'},
+      raindrop:{v:'Depends',t:'m',n:'Tied to the company\u2019s fortunes.'},
+      pocket:{v:'\u2716 it happened',t:'n',n:'Discontinued July 2025; exports ended.'},
+      sync:{v:'Depends',t:'m',n:'Tied to your vendor account.'} },
+    { k:'notes', label:'Notes on bookmarks', ov:true,
+      us:{v:'\u2714 anywhere',t:'y',n:'Pre-filled from your highlighted text; editable from any browser or the sheet itself.'},
+      floccus:{v:'\u2716',t:'n',n:'Syncs the tree; no annotation.'},
+      raindrop:{v:'\u2714',t:'y',n:'Notes and highlights in its apps.'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2716',t:'n'} },
+    { k:'price', label:'Price \u00b7 source', ov:true,
+      us:{v:'Free \u00b7 AGPL',t:'y',n:'Free forever, fully open source. Nothing to upsell.'},
+      floccus:{v:'Free \u00b7 OSS',t:'y',n:'Free and fully open source.'},
+      raindrop:{v:'Freemium',t:'m',n:'Pro subscription; service is proprietary.'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'Free',t:'m',n:'Browser-dependent openness.'} },
+    { k:'account', label:'New account needed',
+      us:{v:'None',t:'y',n:'Uses the Google sign-in you already have.'},
+      floccus:{v:'Backend-dependent',t:'m',n:'e.g. a Nextcloud instance or Drive account.'},
+      raindrop:{v:'Yes',t:'m'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'Vendor account',t:'m'} },
+    { k:'provenance', label:'Which browser saved it',
+      us:{v:'\u2714 tab per browser',t:'y',n:'Plus profile labels on every row.'},
+      floccus:{v:'\u2716 merged',t:'n',n:'One unified tree.'},
+      raindrop:{v:'\u2716 unified',t:'n'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2716 merged',t:'n'} },
+    { k:'twoway', label:'Two-way sync (deletes)',
+      us:{v:'\u2716 by design',t:'n',n:'Append-only log \u2014 a sync bug can never mass-delete your bookmarks. Deleting a sheet row makes a page saveable again.'},
+      floccus:{v:'\u2714 full mirror',t:'y',n:'True tree mirroring, deletions included.'},
+      raindrop:{v:'Own apps only',t:'m'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2714 one brand',t:'y'} },
+    { k:'e2e', label:'E2E encryption option',
+      us:{v:'\u2716',t:'n',n:'The sheet is readable by design \u2014 it IS the interface.'},
+      floccus:{v:'\u2714 optional',t:'y'},
+      raindrop:{v:'\u2716',t:'n'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'Varies',t:'m',n:'e.g. Chrome sync passphrase.'} },
+    { k:'auto', label:'Automation',
+      us:{v:'\u2714 Sheets ecosystem',t:'y',n:'Formulas, Apps Script, exports, integrations \u2014 anything Sheets can do.'},
+      floccus:{v:'Git backend',t:'m',n:'Technical workflows via the Git backend.'},
+      raindrop:{v:'API',t:'m',n:'Paid tiers for some uses.'},
+      pocket:{v:'\u2014',t:'d'},
+      sync:{v:'\u2716',t:'n'} },
+  ],
+  verdicts: {
+    floccus:['Choose floccus to mirror your native bookmark tree \u2014 deletions included \u2014 into a backend you run, with optional E2E encryption.',
+             'Choose SheetBookmark for a zero-setup, sortable, annotatable ledger you open like any spreadsheet.'],
+    raindrop:['Choose Raindrop for a polished cloud app with collections and previews \u2014 if living on its servers is fine.',
+              'Choose SheetBookmark to own the file, skip the account, and never depend on a company.'],
+    pocket:['Pocket is gone \u2014 its July 2025 shutdown is the whole argument.',
+            'Choose SheetBookmark so a shutdown can never take your collection: there is nothing to shut down.'],
+    sync:['Built-in sync is perfect if you live inside one browser brand.',
+          'Choose SheetBookmark the day you use two.'],
+  },
+};
+
+const LETTERS = 'ABCDEFG';
+const grid = document.getElementById('grid');
+const fxbar = document.getElementById('fxbar');
+const tabsEl = document.getElementById('tabs');
+const VIEWS = [
+  { id:'overview', label:'\u2b50 Overview', cols:['us','floccus','raindrop','pocket','sync'], ov:true },
+  { id:'vs-floccus', label:'vs floccus', cols:['us','floccus'] },
+  { id:'vs-raindrop', label:'vs Raindrop', cols:['us','raindrop'] },
+  { id:'vs-pocket', label:'vs Pocket', cols:['us','pocket'] },
+  { id:'vs-sync', label:'vs browser sync', cols:['us','sync'] },
+];
+
+function cellHtml(cell, isUs) {
+  const cls = ['cell', 't-' + (cell.t || 'm'), isUs ? 'us' : '', cell.n ? 'has-note' : ''].join(' ');
+  const tip = cell.n ? `<span class="tip">${cell.n}</span>` : '';
+  return `<td class="${cls}">${cell.v}${tip}</td>`;
+}
+
+function render(view) {
+  const rows = COMP.rows.filter((r) => !view.ov || r.ov);
+  let html = '<tr class="letters"><th></th><th>A</th>' +
+    view.cols.map((_, i) => `<th>${LETTERS[i + 1]}</th>`).join('') + '</tr>';
+  html += '<tr class="names"><th class="rn">1</th><th>Feature</th>' +
+    view.cols.map((c) => `<th class="${c === 'us' ? 'us' : ''} ${c === 'pocket' ? 'dead' : ''}">${COMP.cols[c]}</th>`).join('') + '</tr>';
+  rows.forEach((r, i) => {
+    html += `<tr><th class="rn">${i + 2}</th><th class="feat">${r.label}</th>` +
+      view.cols.map((c) => cellHtml(r[c], c === 'us')).join('') + '</tr>';
+  });
+  if (!view.ov) {
+    const other = view.cols[1];
+    const [them, us] = COMP.verdicts[other];
+    html += `<tr class="verdict"><th class="rn">${rows.length + 2}</th><th class="feat">Verdict</th>` +
+      `<td class="cell us">${us}</td><td class="cell">${them}</td>`.replace('</td><td', '</td><td') + '</tr>';
+    // order columns: us first then them — swap to match header order (us, other)
+  }
+  grid.innerHTML = html;
+  fxbar.textContent = `=COMPARE("${view.label.replace('\u2b50 ', '')}")`;
+}
+
+function select(id, push) {
+  const view = VIEWS.find((v) => v.id === id) || VIEWS[0];
+  render(view);
+  [...tabsEl.children].forEach((t) => t.classList.toggle('on', t.dataset.id === view.id));
+  if (push) history.replaceState(null, '', '#' + view.id);
+}
+
+VIEWS.forEach((v) => {
+  const b = document.createElement('button');
+  b.className = 'sw-tab';
+  b.dataset.id = v.id;
+  b.textContent = v.label;
+  b.onclick = () => select(v.id, true);
+  tabsEl.append(b);
+});
+select(location.hash.slice(1) || 'overview', false);
 </script>
 </body>
 </html>
