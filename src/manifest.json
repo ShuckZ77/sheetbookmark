@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SheetBookmark",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Save bookmarks from every browser into one Google Sheet in your own Drive \u2014 a tab per browser, searchable everywhere.",
   "permissions": [
     "identity",

@@ -46,7 +46,10 @@ const TARGETS = {
     browser_specific_settings: {
       gecko: {
         id: 'bookmark-sheet-sync@local',
-        strict_min_version: '115.0',
+        // 140+ because data_collection_permissions (the built-in consent screen) shipped
+        // in Firefox 140 — older versions would install without showing consent. 140 is
+        // also the current ESR line, so enterprise stays covered. Zero users lost pre-launch.
+        strict_min_version: '140.0',
         // Mozilla's built-in data-consent (required for new AMO submissions). Honest
         // declaration under their definition ("anything transmitted outside the local
         // browser"): bookmark records + the page-content note go to the USER'S OWN
@@ -54,6 +57,12 @@ const TARGETS = {
         data_collection_permissions: {
           required: ['bookmarksInfo', 'websiteContent'],
         },
+      },
+      // Android floor is separate: the consent key arrived there in 142. This only
+      // scopes versions IF the add-on is ever offered on Android — availability itself
+      // stays off via the AMO compatibility checkbox (no `bookmarks` API on Android).
+      gecko_android: {
+        strict_min_version: '142.0',
       },
     },
   },

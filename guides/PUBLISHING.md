@@ -168,11 +168,18 @@ Firefox).
    New Add-on*.
 2. Channel: **Listed on this site** (that's the public showcase; "self-distribution" is for
    privately hosted signed builds).
-3. Upload `dist/bookmark-sheet-sync-firefox-<version>.zip`.
+3. Upload `dist/sheetbookmark-firefox-<version>.zip`. The manifest carries Mozilla's required
+   `data_collection_permissions` declaration (`bookmarksInfo` + `websiteContent` — honest under
+   Mozilla's "anything transmitted outside the local browser" definition, even though the data goes
+   only to the user's own Google Sheet; say exactly that in the listing description). Minimum
+   Firefox is 140 desktop / 142 Android (`gecko_android`) — the versions that introduced the
+   built-in consent screen; the Android entry only silences the validator, availability stays off.
+4. Compatibility: **Firefox (desktop) only — leave "Firefox for Android" unchecked.** Firefox on
+   Android does not implement the `bookmarks` API this extension is built on.
 5. Source code: our build is plain, unbundled, unminified — answer **no** to "does your submission
    require source code?"; no upload needed.
-6. Listing: name, summary, description, icon, screenshots, category (e.g. *Bookmarks*), privacy
-   policy URL.
+6. Listing: name, summary, description, icon, screenshots (see `private/store-assets/` if you kept
+   them), category *Bookmarks*, license AGPL-3.0, privacy policy URL.
 7. Submit. Auto-signing usually completes in **~24 h**; manual review, if selected, takes longer.
 8. Nothing OAuth-related changes: the published add-on keeps the pinned `gecko.id`, so the loopback
    redirect URI you registered in Step 2 already works. ✅ Live.
@@ -182,7 +189,7 @@ Firefox).
 1. [partner.microsoft.com/dashboard](https://partner.microsoft.com/dashboard) → enroll in the
    **Microsoft Edge program** (Microsoft account; **Individual** — company accounts add days of
    verification; note: account type and country are permanent).
-2. *Create new extension* → upload `dist/bookmark-sheet-sync-chrome-<version>.zip` (the Chromium
+2. *Create new extension* → upload `dist/sheetbookmark-chrome-<version>.zip` (the Chromium
    zip — Edge consumes the same package). **Don't submit yet.**
 3. Grab the **extension ID** shown in the product overview/URL. Add
    `https://<that-id>.chromiumapp.org/` to the OAuth client (Step 2.5) — without this, Connect
