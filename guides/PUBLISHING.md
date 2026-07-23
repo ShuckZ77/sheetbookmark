@@ -149,72 +149,111 @@ mechanism all six target browsers share. The extension simply plays the role of 
 "site" is the redirect URL the browser intercepts (`chromiumapp.org` on Chromium, the loopback on
 Firefox).
 
-## Step 3 — Prepare listing assets (once, reused everywhere)
+## Step 3 — Listing assets (exact sizes — stores hard-reject wrong dimensions)
 
-- **Icon**: `icons/icon-128.png` (already generated).
-- **Screenshots**: 1280×800, 1–5 of them. Popup with bookmarks from several browsers, options page,
-  and the Google Sheet with per-browser tabs make the story obvious.
-- **Short description** (≈130 chars): *"Sync bookmarks from every browser into one Google Sheet in
-  your own Drive — a tab per browser, searchable everywhere, no server."*
-- **Long description**: lead with cross-browser + your-own-Drive + no-server/no-tracking; list the
-  cadence options and the import button; state the single `drive.file` scope in plain words.
-- Reviewer test note (all stores): *"Click Connect Google Sheets in options, sign in with any
-  Google account — it creates its own spreadsheet in that account's Drive. Ctrl/Cmd+D any page and
-  the row appears in the sheet within seconds. No credentials needed."*
+| Asset | Chrome | Edge | Firefox | File |
+| --- | --- | --- | --- | --- |
+| Icon | 128×128 in the zip ✔ (ships automatically) | 1:1, rec 300×300, min 128 (reuse icon-128) | from zip ✔ | `icons/icon-128.png` |
+| Screenshots | **≥1 mandatory, exactly 1280×800 or 640×400**, max 5 | optional, exactly 640×480 or 1280×800, max 6 | flexible | `private/store-assets/shot-1..4.png` |
+| Small promo tile | **440×280 MANDATORY** | 440×280 optional | — | `private/store-assets/tile-small.png` |
+| Marquee tile | 1400×560 optional | 1400×560 optional | — | `private/store-assets/tile-marquee.png` |
+
+Regenerate everything at exact sizes any time:
+
+```sh
+python3 scripts/store-assets.py && sh private/store-assets/render.sh
+```
+
+Copy blocks that every store asks for:
+
+- **Short description**: *"Sync bookmarks from every browser into one Google Sheet in your own
+  Drive — a tab per browser, searchable everywhere, no server."*
+- **Long description**: the plain-text version used on AMO (front-load the first 250 characters;
+  AMO renders NO HTML; Edge requires **minimum 250 characters**).
+- **Reviewer test note** (all stores): *"Click Connect Google Sheets in options, sign in with any
+  Google account — the extension creates its own spreadsheet in that account's Drive. Ctrl/Cmd+D
+  any page and the row appears in the sheet within seconds. No test credentials needed."*
 
 ## Step 4 — Firefox (AMO) — free, do first
 
-1. Create a Firefox Account → [addons.mozilla.org](https://addons.mozilla.org) → *Tools → Submit a
-   New Add-on*.
-2. Channel: **Listed on this site** (that's the public showcase; "self-distribution" is for
-   privately hosted signed builds).
-3. Upload `dist/sheetbookmark-firefox-<version>.zip`. The manifest carries Mozilla's required
-   `data_collection_permissions` declaration (`bookmarksInfo` + `websiteContent` — honest under
-   Mozilla's "anything transmitted outside the local browser" definition, even though the data goes
-   only to the user's own Google Sheet; say exactly that in the listing description). Minimum
-   Firefox is 140 desktop / 142 Android (`gecko_android`) — the versions that introduced the
-   built-in consent screen; the Android entry only silences the validator, availability stays off.
-4. Compatibility: **Firefox (desktop) only — leave "Firefox for Android" unchecked.** Firefox on
-   Android does not implement the `bookmarks` API this extension is built on.
-5. Source code: our build is plain, unbundled, unminified — answer **no** to "does your submission
-   require source code?"; no upload needed.
-6. Listing: name, summary, description, icon, screenshots (see `private/store-assets/` if you kept
-   them), category *Bookmarks*, license AGPL-3.0, privacy policy URL.
-7. Submit. Auto-signing usually completes in **~24 h**; manual review, if selected, takes longer.
-8. Nothing OAuth-related changes: the published add-on keeps the pinned `gecko.id`, so the loopback
-   redirect URI you registered in Step 2 already works. ✅ Live.
+**Before uploading:** loopback redirect URI registered and Connect tested in Firefox (Step 2.5);
+OAuth app **In production**; fresh artifact via `npm test && npm run zip`.
+
+1. Firefox Account → [addons.mozilla.org](https://addons.mozilla.org) → *Tools → Submit a New
+   Add-on* → channel **Listed**.
+2. Upload `dist/sheetbookmark-firefox-<version>.zip`. Validator facts learned the hard way:
+   - `data_collection_permissions` is **required** for new extensions. Ours declares
+     `bookmarksInfo` + `websiteContent` — honest under Mozilla's "anything transmitted outside the
+     local browser" definition even though data goes only to the user's own sheet.
+   - **One-way door:** once a version ships the key, every future version must keep it.
+   - Version floors: desktop **140**, Android **142** (`gecko_android`) — the releases that
+     introduced the consent screen. Lower floors = validator warnings.
+3. Compatibility: **Firefox desktop only** — leave *Firefox for Android* unchecked (no `bookmarks`
+   API there; `gecko_android` in the manifest only scopes versions, it does not enable Android).
+4. "Do you need to submit source code?" → **No.** The bullets describe minifiers/bundlers/template
+   engines; every file in our zip is verbatim, readable source. (Fallback if ever queried: the
+   public repo link.)
+5. Listing: name, summary, the **plain-text** description (HTML tags are shown literally — do not
+   use them), category *Bookmarks*, license **AGPL-3.0**, privacy policy URL, screenshots
+   (`shot-1..4.png`), homepage (site) + support (GitHub issues).
+6. Submit. Auto-signing usually **~24 h** after validation; human review can happen afterwards at
+   any time.
+7. **Shipping updates later:** bump the version (`package.json` — the build stamps the manifest),
+   `npm test && npm run zip`, then upload **from the add-on's own page in the Developer Hub** —
+   never via "Submit a New Add-on", which creates a duplicate listing with a new ID. Users are
+   only re-prompted for consent if a *new* required data category is added. Listing text and
+   images are editable any time without a new version (*Manage Listing*).
 
 ## Step 5 — Edge (Partner Center) — free, do second
 
-1. [partner.microsoft.com/dashboard](https://partner.microsoft.com/dashboard) → enroll in the
-   **Microsoft Edge program** (Microsoft account; **Individual** — company accounts add days of
-   verification; note: account type and country are permanent).
-2. *Create new extension* → upload `dist/sheetbookmark-chrome-<version>.zip` (the Chromium
-   zip — Edge consumes the same package). **Don't submit yet.**
-3. Grab the **extension ID** shown in the product overview/URL. Add
-   `https://<that-id>.chromiumapp.org/` to the OAuth client (Step 2.5) — without this, Connect
-   fails for Edge-store users *and* for the reviewer.
-4. Fill listing (assets from Step 3; description 250–10,000 chars; logo ≥128×128), **Privacy** tab
-   (policy URL, per-permission justifications — table below), Availability: **Public**.
-5. Submit. Certification takes **up to 7 business days**. ✅ Live.
+1. Enroll: [partner.microsoft.com/dashboard](https://partner.microsoft.com/dashboard) → Microsoft
+   Edge program. **Microsoft account only** (Outlook/Live/GitHub — work/school accounts cannot
+   enroll). Choose **Individual**. ⚠ Country/region and the Individual/Company choice are
+   **permanent**. Verification typically **3–5 business days** — you can prepare meanwhile.
+2. *Create new extension* → upload `dist/sheetbookmark-chrome-<version>.zip` (Edge consumes the
+   Chromium zip; the extra `browser_specific_settings` key is ignored). **Do not submit yet.**
+3. Copy the **extension ID** from the product page → add
+   `https://<that-id>.chromiumapp.org/` to the Google OAuth client. Skipping this bricks Connect
+   for the reviewer and every Edge user.
+4. Listing quirks that surprise people:
+   - **Description must be 250–10,000 characters** — too short fails form validation.
+   - **Name, short description and description come from the manifest and are read-only** in
+     Partner Center — fixing a typo means rebuild + re-upload.
+   - Logo 1:1 (300×300 recommended, `icons/icon-128.png` acceptable), screenshots optional
+     (`shot-*.png` are the right size), up to 7 search terms.
+5. **Privacy page:** single-purpose text; a justification box **per manifest permission** (reuse
+   the table below); remote code → **No**; *"Does the extension handle personal information?"* →
+   **Yes** (OAuth token counts) → which makes the **privacy policy URL mandatory**.
+6. **Notes for certification** box: paste the reviewer test note from Step 3 — an OAuth extension
+   the reviewer can't exercise is a certification failure waiting to happen.
+7. Submit → certification up to **7 business days**. ✅ Live.
 
 ## Step 6 — Chrome (Web Store) — $5, whenever you're ready
 
-1. Pick the Google account carefully (developer email is permanent), enable **2-Step Verification**
-   (publishing is blocked without it), register at the
-   [Developer Dashboard](https://chrome.google.com/webstore/devconsole), pay **$5** (one-time,
-   covers 20 extensions).
-2. Account tab → **Trader/Non-Trader declaration** (mandatory, EU DSA). Individual hobby project →
-   *Non-Trader*, nothing verified. Company → *Trader*: legal name, address and SMS-verified phone,
-   **published on your listing**.
-3. **Add new item** → upload the Chromium zip → **draft only**. This assigns the permanent item ID.
-   (Our zips deliberately contain no manifest `key` — the store rejects new items that have one.)
-4. Add `https://<store-item-id>.chromiumapp.org/` to the OAuth client. Optionally copy the store's
-   public key (item → Package → *View public key*) into `.keys/manifest-key.txt` so your local dev
-   ID matches the store ID from now on.
-5. Store listing + Privacy practices tabs (tables below), distribution **Public** (or *Unlisted*
-   for a soft launch — same review, no public blast radius).
-6. Submit. Review: days, sometimes weeks; chase support at 3 weeks. ✅ Live.
+1. Account: permanent-forever Google account, **2-Step Verification on** (publish is blocked
+   without it), register at the [Developer Dashboard](https://chrome.google.com/webstore/devconsole),
+   pay **$5 one-time** (covers 20 extensions).
+2. **Trader / Non-Trader declaration** (mandatory, EU DSA): individual hobby project → Non-Trader,
+   nothing verified. Trader → legal name + address + **SMS-verified phone** (no non-SMS lines),
+   all **displayed publicly** on the listing.
+3. **Add new item** → upload the Chromium zip → **draft only**. This assigns the permanent item ID
+   (our zips carry no manifest `key` — the store rejects new items that have one).
+4. Register `https://<store-item-id>.chromiumapp.org/` on the OAuth client. Optionally copy the
+   store's public key (item → Package → *View public key*) into `.keys/manifest-key.txt` so local
+   dev and store share one ID.
+5. Store listing — hard requirements: detailed description, category, language, ≥1 screenshot at
+   **exactly 1280×800** (ours), and the **mandatory 440×280 small promo tile**. Optional: marquee
+   1400×560, YouTube video.
+6. **Privacy practices tab** (Submit stays disabled until complete): single purpose,
+   per-permission justifications (table below), remote code → **No**, data-usage checkboxes +
+   Limited Use certifications, privacy policy URL.
+7. ⚠ **Policy in force since Aug 1, 2026:** all data collection must be *prominently disclosed
+   in-product* (our Connect screen's "creates and manages its own bookmark sheet in your Drive"
+   wording is that disclosure — keep it), and any future change to data practices must be
+   *proactively communicated to users* (changelog + listing update at minimum).
+8. Distribution: Public, or **Unlisted for a soft launch** (same review, no public blast radius).
+   Submit. Review: days to a few weeks; **no edits while "Pending review"** — use ⋮ → *Cancel
+   review* to return to draft, edit, resubmit. Chase support at 3 weeks.
 
 ## Step 7 — Analytics
 
