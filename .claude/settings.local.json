@@ -31,7 +31,12 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(node --check src/lib/store.js)"
+      "Bash(node --check src/lib/store.js)",
+      "Bash(node --check src/lib/sheets.js)",
+      "Bash(git mv *)",
+      "Bash(node -e \"const m=require\\('./dist/chrome/manifest.json'\\);console.log\\('zip key:', m.key?'✗':'absent ✓','| name:',m.name,'| v'+m.version\\)\")",
+      "Bash(node -e \"const m=require\\('./dist/chrome/manifest.json'\\);console.log\\('dev key:', m.key?'present ✓':'✗'\\)\")",
+      "Bash(git check-ignore *)"
     ]
   }
 }

@@ -16,9 +16,7 @@ kind. Your bookmarks travel directly from your browser to your own Google accoun
 | --- | --- | --- |
 | Bookmark page titles, URLs, folder names — and, when you save via the toolbar button, the page's public meta description | This is the thing being synced | A spreadsheet **the extension creates in your own Google Drive** |
 | The browser name, OS, and the profile label you type | Written into each row so you can tell which browser saved what | The same spreadsheet |
-| Page details on toolbar saves: meta description (or text you selected), site name, an estimated reading time | Saved into the row you asked for | The same spreadsheet |
-| Visit count and last-visit date for a page — **only if you switch on the optional visit-stats setting**, which triggers the browser's own permission prompt for history access | Written into that bookmark's row at save time; history is read locally and never transmitted anywhere except into your own sheet | The same spreadsheet |
-| The "I have an account here" checkbox — a yes/no you declare yourself; the extension cannot and does not read passwords or saved logins | Saved into the row | The same spreadsheet |
+| The note you write (pre-filled from your text selection or the page's meta description on toolbar saves; editable per-row afterwards) | Saved into that bookmark's row | The same spreadsheet |
 | A Google OAuth access token | To authorize writing to that one spreadsheet | Held in your browser's **session memory only**. Never written to disk, never transmitted anywhere except to Google |
 | Your settings, an upload queue, and a list of already-synced URLs | To work offline and avoid duplicate rows | Stored **locally in your browser** (`storage.local`). Never transmitted |
 

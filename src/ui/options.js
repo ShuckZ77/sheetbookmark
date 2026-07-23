@@ -188,7 +188,7 @@ async function buildDiagnostics() {
   const recent = log.slice(-8).map((entry) => `- ${entry.at} [${entry.context}] ${entry.message}`);
   return [
     `SheetBookmark v${manifest.version} — ${browser} · ${os}`,
-    `connected: ${Boolean(settings.sheetId)} · sync: ${settings.syncMode} · capture ⌘D: ${settings.captureNative} · visit stats: ${settings.visitStats}`,
+    `connected: ${Boolean(settings.sheetId)} · sync: ${settings.syncMode} · capture ⌘D: ${settings.captureNative}`,
     recent.length ? `recent errors:\n${recent.join('\n')}` : 'recent errors: none',
   ].join('\n');
 }
@@ -246,7 +246,6 @@ async function init() {
   $('profile').placeholder = `${browser} — ${os}`;
   $('profile').value = settings.profileLabel;
   $('capture-native').checked = settings.captureNative;
-  $('visit-stats').checked = settings.visitStats;
   $('sync-mode').value = settings.syncMode;
 
   $('connect').onclick = () => connect();
@@ -261,19 +260,6 @@ async function init() {
   $('report-issue').onclick = reportIssue;
   $('copy-diag').onclick = copyDiagnostics;
   $('capture-native').onchange = (event) => setSettings({ captureNative: event.target.checked });
-  $('visit-stats').onchange = async (event) => {
-    // The permission prompt must come from this click; declined means the box stays off.
-    if (event.target.checked) {
-      const granted = await api.permissions.request({ permissions: ['history'] }).catch(() => false);
-      if (!granted) {
-        event.target.checked = false;
-        return;
-      }
-    } else {
-      await api.permissions.remove({ permissions: ['history'] }).catch(() => {});
-    }
-    await setSettings({ visitStats: event.target.checked });
-  };
   $('sync-mode').onchange = (event) => send({ type: 'setSync', syncMode: event.target.value });
   $('profile').onchange = (event) => setSettings({ profileLabel: event.target.value.trim() });
 

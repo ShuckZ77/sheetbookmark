@@ -250,18 +250,13 @@ test('appendRows chunks at 500 and posts RAW values in column order', async () =
     'Title 500',
     'https://example.com/500',
     '',
-    '',
-    '',
-    '',
-    '',
-    '',
   ]);
 });
 
 test('appendRows escapes a tab name containing a quote', async () => {
   const calls = stubFetch(() => ({ body: {} }));
   await appendRows('tok', 'SHEET', "Rishi's tab", [{ url: 'https://example.com' }]);
-  assert.ok(calls[0].url.includes(encodeURIComponent("'Rishi''s tab'!A:O")));
+  assert.ok(calls[0].url.includes(encodeURIComponent("'Rishi''s tab'!A:J")));
 });
 
 test('readTabRows maps positional cells onto column names', async () => {

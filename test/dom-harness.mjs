@@ -66,10 +66,17 @@ class El {
     return this._attrs[k] ?? null;
   }
   append(...nodes) {
+    nodes.forEach((node) => (node.parentElement = this));
     this.children.push(...nodes);
   }
   replaceChildren(...nodes) {
+    nodes.forEach((node) => (node.parentElement = this));
     this.children = nodes;
+  }
+  remove() {
+    const siblings = this.parentElement?.children;
+    if (siblings) siblings.splice(siblings.indexOf(this), 1);
+    this.parentElement = null;
   }
   addEventListener() {}
   focus() {}
@@ -113,6 +120,8 @@ const stableChrome = {
       if (msg.type === 'listRows') return { ok: true, rows: ctx.rows };
       if (msg.type === 'connect') return ctx.connectResult;
       if (msg.type === 'isSaved') return { ok: true, saved: ctx.savedState ?? false };
+      if (msg.type === 'saveTab') return { ok: true, row: { ...msg.tab, tab: 'Test', id: 'new-id', timestamp: '2026-07-23T10:00:00+05:30', browser: 'Chrome' } };
+      if (msg.type === 'setNote') return { ok: true, note: String(msg.note ?? '').trim() };
       return { ok: true };
     },
     openOptionsPage: async () => {},
@@ -144,6 +153,12 @@ const stableChrome = {
   },
 };
 
+class FakeIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 let globalsReady = false;
 
 export function installGlobals(html, { status = {}, rows = [] } = {}) {
@@ -155,6 +170,7 @@ export function installGlobals(html, { status = {}, rows = [] } = {}) {
 
   if (globalsReady) return ctx;
   globalThis.chrome = stableChrome;
+  globalThis.IntersectionObserver = FakeIntersectionObserver;
   globalThis.browser = undefined;
   // navigator is a read-only accessor global in Node; shadow it with defineProperty.
   Object.defineProperty(globalThis, 'navigator', {

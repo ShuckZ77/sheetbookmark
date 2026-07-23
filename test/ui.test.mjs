@@ -138,22 +138,52 @@ test('Copy diagnostics assembles version, environment and settings', async () =>
   assert.match(ctx.clipboard, /recent errors: none/);
 });
 
-test('a toolbar save carries the page description read via scripting', async () => {
+test('the note field pre-fills on open and the user\'s edit is what gets saved', async () => {
   const status = { ok: true, connected: true, needsAuth: false, profile: 'W', sheetId: 'S', queued: 0 };
   const { messages } = installGlobals(page('popup.html'), { status, rows: [] });
 
   await script('popup.js');
   await settle(40);
 
-  await globalThis.document.getElementById('save-tab').onclick();
+  const doc = globalThis.document;
+  assert.equal(doc.getElementById('note').value, 'A sample description', 'pre-filled from the page');
+
+  doc.getElementById('note').value = 'my own words';
+  await doc.getElementById('save-tab').onclick();
 
   const save = messages.find((m) => m.type === 'saveTab');
-  assert.ok(save, 'save message sent');
-  assert.equal(save.tab.url, 'https://sample.example/');
-  assert.equal(save.tab.description, 'A sample description', 'meta description travels with the save');
-  assert.equal(save.tab.site, 'Sample Site');
-  assert.equal(save.tab.reading, '2 min', '440 words at 220 wpm');
-  assert.equal(save.tab.account, '', 'account flag unchecked by default');
+  assert.equal(save.tab.note, 'my own words', 'the edited note wins');
+});
+
+test('the per-row pencil opens a single editor and saves via setNote', async () => {
+  const rows = [
+    { timestamp: '2026-07-01T10:00:00+05:30', id: 'r1', tab: 'Chrome — Mac', browser: 'Chrome', profile: 'W', title: 'A', url: 'https://a.dev', note: '' },
+    { timestamp: '2026-06-01T10:00:00+05:30', id: 'r2', tab: 'Chrome — Mac', browser: 'Chrome', profile: 'W', title: 'B', url: 'https://b.dev', note: 'old' },
+  ];
+  const status = { ok: true, connected: true, needsAuth: false, profile: 'W', sheetId: 'S', queued: 0 };
+  const { messages } = installGlobals(page('popup.html'), { status, rows });
+
+  await script('popup.js');
+  await settle(40);
+
+  const doc = globalThis.document;
+  const list = doc.getElementById('list');
+  const firstRow = list.children[0];
+  const pencil = firstRow.children[0].children[1]; // row-line > [row-btn, note-btn]
+  assert.equal(pencil.textContent, '✎');
+
+  pencil.onclick();
+  const editor = firstRow.children[1];
+  assert.equal(editor.className, 'note-editor', 'editor appears inside the row');
+
+  const [input, saveBtn] = editor.children;
+  input.value = 'fresh note';
+  await saveBtn.onclick();
+
+  const sent = messages.find((m) => m.type === 'setNote');
+  assert.equal(sent.id, 'r1');
+  assert.equal(sent.tab, 'Chrome — Mac');
+  assert.equal(sent.note, 'fresh note');
 });
 
 test('the save button reads Already saved when the page is in the sheet', async () => {

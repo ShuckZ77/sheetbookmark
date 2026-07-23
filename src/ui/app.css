@@ -5,54 +5,61 @@
 :root {
   color-scheme: light dark;
 
-  --bg-base: #f4f7fb;
-  --bloom-green: rgba(13, 148, 102, 0.14);
-  --bloom-navy: rgba(23, 58, 110, 0.14);
+  --bg-base: #fdfcf9;
+  --grid: rgba(26, 45, 79, 0.05);
 
-  --ink: #0f2542;
-  --ink-soft: #44607f;
-  --ink-faint: #74879d;
+  --ink: #1a2d4f;
+  --ink-soft: #51617d;
+  --ink-faint: #8492a8;
 
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-strong: rgba(255, 255, 255, 0.92);
-  --surface-hover: #ffffff;
-  --stroke: rgba(15, 37, 66, 0.1);
-  --stroke-strong: rgba(15, 37, 66, 0.18);
-  --shadow: 0 10px 34px rgba(15, 37, 66, 0.1);
+  --surface: #ffffff;
+  --surface-strong: #f4f6fa;
+  --surface-hover: #edf1f8;
+  --stroke: rgba(26, 45, 79, 0.12);
+  --stroke-strong: rgba(26, 45, 79, 0.2);
+  --shadow: 0 10px 30px rgba(26, 45, 79, 0.08);
 
-  --accent: #059669;
-  --accent-bright: #10b981;
+  --accent: #047857;
+  --accent-bright: #059669;
   --accent-ink: #ffffff;
-  --accent-wash: rgba(5, 150, 105, 0.12);
+  --accent-wash: rgba(4, 120, 87, 0.1);
+
+  --blue: #1d4ed8;
+  --blue-ink: #ffffff;
+  --blue-soft: #eaf0fd;
 
   --warn: #b45309;
   --danger: #be123c;
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --radius: 16px;
+  --radius: 13px;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-base: #0a1626;
-    --bloom-green: rgba(16, 185, 129, 0.15);
-    --bloom-navy: rgba(37, 78, 138, 0.38);
+    --bg-base: #0c1830;
+    --grid: rgba(226, 233, 244, 0.045);
 
-    --ink: #f2f5f9;
-    --ink-soft: #a9b6c8;
-    --ink-faint: #6e8095;
+    --ink: #e9eef6;
+    --ink-soft: #a5b2c6;
+    --ink-faint: #6d7e96;
 
-    --surface: rgba(255, 255, 255, 0.055);
-    --surface-strong: rgba(255, 255, 255, 0.1);
-    --surface-hover: rgba(255, 255, 255, 0.14);
-    --stroke: rgba(255, 255, 255, 0.12);
-    --stroke-strong: rgba(255, 255, 255, 0.2);
-    --shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+    --surface: #13233f;
+    --surface-strong: #1b3054;
+    --surface-hover: #223a63;
+    --stroke: rgba(233, 238, 246, 0.12);
+    --stroke-strong: rgba(233, 238, 246, 0.22);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 
-    --accent: #34d399;
-    --accent-bright: #6ee7b7;
-    --accent-ink: #062d1f;
-    --accent-wash: rgba(52, 211, 153, 0.15);
+    --accent: #10b981;
+    --accent-bright: #34d399;
+    --accent-ink: #06251a;
+    --accent-wash: rgba(52, 211, 153, 0.14);
+
+    --blue: #7ea8ff;
+    --blue-ink: #0c1830;
+    --blue-soft: rgba(126, 168, 255, 0.16);
 
     --warn: #fbbf24;
     --danger: #fb7185;
@@ -66,7 +73,11 @@
 body {
   margin: 0;
   color: var(--ink);
-  background: var(--bg-base);
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    var(--bg-base);
+  background-size: 26px 26px, 26px 26px, auto;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   font-size: 13px;
   line-height: 1.5;
@@ -76,16 +87,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Two soft blooms behind the glass give the blur something to pick up. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(58% 48% at 10% 4%, var(--bloom-green), transparent 72%),
-    radial-gradient(52% 44% at 94% 96%, var(--bloom-navy), transparent 72%);
-}
 
 .hidden {
   display: none !important;
@@ -93,13 +94,12 @@ body::before {
 
 /* --- Primitives ---------------------------------------------------------- */
 
+/* Paper card. The class name predates the theme; the look is flat paper now. */
 .glass {
   background: var(--surface);
   border: 1px solid var(--stroke);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 button {
@@ -173,7 +173,7 @@ button:not(:disabled):active {
 }
 
 .btn-link:hover {
-  color: var(--accent);
+  color: var(--blue);
 }
 
 input[type="text"],
@@ -216,7 +216,7 @@ input:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
@@ -247,6 +247,7 @@ input:focus-visible {
 /* --- Status pill --------------------------------------------------------- */
 
 .pill {
+  transition: color 0.25s var(--ease);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -261,6 +262,7 @@ input:focus-visible {
 }
 
 .pill::before {
+  transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
   content: "";
   width: 6px;
   height: 6px;
@@ -278,6 +280,18 @@ input:focus-visible {
 }
 
 /* --- Motion -------------------------------------------------------------- */
+
+/* Save success: one springy pop, transform-only (compositor), 0 layout cost. */
+@keyframes pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.045); }
+  70% { transform: scale(0.985); }
+  100% { transform: scale(1); }
+}
+
+.save.pop {
+  animation: pop 0.38s var(--ease);
+}
 
 @keyframes rise {
   from {
@@ -378,17 +392,20 @@ input:focus-visible {
   box-shadow: none;
 }
 
-.save-extra {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  color: var(--ink-faint);
-  margin: -3px 2px 0;
+.note-field {
+  width: 100%;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 8px 11px;
+  margin-top: -2px;
 }
 
-.save-extra input {
-  accent-color: var(--accent);
+.note-field::placeholder {
+  color: var(--ink-faint);
 }
 
 .search-wrap {
@@ -431,8 +448,8 @@ input:focus-visible {
 }
 
 .chip[aria-pressed="true"] {
-  color: var(--accent-ink);
-  background: var(--accent);
+  color: var(--blue-ink);
+  background: var(--blue);
   border-color: transparent;
 }
 
@@ -461,11 +478,66 @@ input:focus-visible {
   animation-delay: calc(var(--i, 0) * 15ms);
 }
 
+.row-line {
+  display: flex;
+  align-items: center;
+}
+
+.note-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin: 0 2px 0 6px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 13px;
+}
+
+.note-btn:hover {
+  border-color: var(--blue);
+}
+
+.note-btn.has-note {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.note-btn.has-note:hover {
+  border-color: var(--accent);
+}
+
+.note-editor {
+  animation: rise 0.22s var(--ease);
+  display: flex;
+  gap: 7px;
+  padding: 0 8px 9px 46px;
+}
+
+.note-editor input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  padding: 6px 9px;
+}
+
+.note-save {
+  padding: 6px 13px;
+  font-size: 12px;
+}
+
 .row-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
   background: none;
   color: inherit;
@@ -596,9 +668,10 @@ input:focus-visible {
 }
 
 .hero h1 {
-  font-size: clamp(18px, 2.4vw, 21px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--serif);
+  font-size: clamp(19px, 2.6vw, 23px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -692,7 +765,7 @@ input:focus-visible {
 }
 
 .card a {
-  color: var(--accent);
+  color: var(--blue);
   font-weight: 550;
 }
 
@@ -735,7 +808,8 @@ label em {
 code {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   font-size: 11.5px;
-  background: var(--accent-wash);
+  color: var(--blue);
+  background: var(--blue-soft);
   border-radius: 5px;
   padding: 1px 5px;
 }
@@ -866,7 +940,7 @@ code {
 }
 
 .repo-line a:hover {
-  color: var(--accent);
+  color: var(--blue);
 }
 
 /* Google's brand button: white surface, official G mark, in both themes. */

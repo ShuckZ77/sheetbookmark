@@ -11,8 +11,11 @@ const APPEND_CHUNK = 500;
  */
 export const COLUMNS = [
   'timestamp', 'id', 'folder', 'browser', 'profile', 'os', 'source', 'title', 'url',
-  'description', 'site', 'reading', 'visits', 'last_visit', 'account',
+  'note',
 ];
+
+const ID_COL = String.fromCharCode(65 + COLUMNS.indexOf('id'));
+const NOTE_COL = String.fromCharCode(65 + COLUMNS.indexOf('note'));
 
 /** Ranges are derived from the column count so schema changes can never desync them. */
 const LAST_COL = String.fromCharCode(64 + COLUMNS.length);
@@ -22,6 +25,17 @@ export class SheetsError extends Error {
     super(message);
     this.name = 'SheetsError';
     this.status = status;
+  }
+}
+
+/** A tab whose header predates the current schema: writing to it would misalign rows. */
+export class SchemaError extends Error {
+  constructor(tab) {
+    super(
+      `The tab “${tab}” was created by an older version of SheetBookmark and its columns no longer match. ` +
+        'Open the sheet and delete that tab (or the whole sheet), then reconnect.',
+    );
+    this.name = 'SchemaError';
   }
 }
 
@@ -89,14 +103,21 @@ export async function listTabs(token, sheetId) {
   }));
 }
 
+/**
+ * Writes the header into an empty tab — and refuses a tab whose existing header does
+ * not match the schema, because positional writes into it would scramble every row.
+ */
 async function ensureHeader(token, sheetId, title) {
   const header = await request(token, `${BASE}/${sheetId}/values/${range(title, `A1:${LAST_COL}1`)}`);
-  if (!header.values?.length) {
+  const existing = header.values?.[0];
+  if (!existing?.length) {
     await request(token, `${BASE}/${sheetId}/values/${range(title, 'A1')}?valueInputOption=RAW`, {
       method: 'PUT',
       body: JSON.stringify({ values: [COLUMNS] }),
     });
+    return;
   }
+  if (COLUMNS.some((column, index) => existing[index] !== column)) throw new SchemaError(title);
 }
 
 /** Creates the spreadsheet with this install's tab already present. */
@@ -161,6 +182,24 @@ const toRow = (values) => Object.fromEntries(COLUMNS.map((column, index) => [col
 export async function readTabRows(token, sheetId, tab) {
   const data = await request(token, `${BASE}/${sheetId}/values/${range(tab, `A2:${LAST_COL}`)}?majorDimension=ROWS`);
   return (data.values ?? []).map(toRow);
+}
+
+/**
+ * Locates a row by its immutable id (column B), surviving the user sorting or deleting
+ * rows in the Sheets UI. Returns the 1-based sheet row number, or null.
+ */
+export async function findRowById(token, sheetId, tab, id) {
+  const data = await request(token, `${BASE}/${sheetId}/values/${range(tab, `${ID_COL}2:${ID_COL}`)}?majorDimension=ROWS`);
+  const index = (data.values ?? []).findIndex((cells) => cells[0] === id);
+  return index === -1 ? null : index + 2; // +1 for the header, +1 for 1-based rows
+}
+
+/** Rewrites exactly one note cell. RAW, so a note starting with `=` stays text. */
+export async function updateNoteCell(token, sheetId, tab, rowNumber, note) {
+  await request(token, `${BASE}/${sheetId}/values/${range(tab, `${NOTE_COL}${rowNumber}`)}?valueInputOption=RAW`, {
+    method: 'PUT',
+    body: JSON.stringify({ values: [[note]] }),
+  });
 }
 
 /**

@@ -55,16 +55,16 @@ never changes, followed by **extension columns appended strictly at the tail** �
 only ever add columns after the last one, so sparse optional data clusters at the right edge
 instead of punching holes through the readable core:
 
-| timestamp | id | folder | browser | profile | os | source | title | url | description | site | reading | visits | last_visit | account |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| timestamp | id | folder | browser | profile | os | source | title | url | note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- **site** (og:site_name), **reading** (word-count → "7 min"): filled on toolbar saves.
-- **description**: text you had selected on the page wins over the meta description — highlight a
-  sentence, hit Save, it becomes your note.
-- **visits / last_visit**: snapshot from browser history at save time — only if the user enables
-  the opt-in (optional `history` permission, runtime prompt, off by default).
-- **account**: the "I have an account on this site" checkbox on the save popup — user-declared,
-  never read from anywhere. Makes the sheet answer "which sites am I registered on?".
+- **note**: an editable field in the save popup, pre-filled from your text selection or the page's
+  meta description (toolbar saves only — Ctrl+D can't read page content without `<all_urls>`).
+  Every row in the popup also has a ✎ button to add or edit its note later — the extension locates
+  the row by its immutable id and rewrites exactly that one cell. Notes are searched by the popup
+  and never overwritten by sync.
+- A tab whose header doesn't match this schema (from an older version) is **refused with a clear
+  message**, never written to — positional writes into a stale tab would scramble rows.
 
 - **timestamp** is IST (UTC+5:30) wall-clock time with an explicit offset — readable, sortable, and
   unambiguous when the same sheet is written from machines in different timezones.
@@ -88,7 +88,7 @@ correct — each keeps it in its own tab.
 The Connect button works because **one OAuth client — yours — is baked into the build**, exactly how
 "Sign in with Google" works on any website. Users never see it.
 
-**→ Full step-by-step: [docs/PUBLISHING.md](docs/PUBLISHING.md).** In brief:
+**→ Full step-by-step: [guides/PUBLISHING.md](guides/PUBLISHING.md).** In brief:
 
 1. Upload a **draft** zip to the Chrome Web Store (`npm run zip`) to get your permanent extension
    ID. The store assigns the ID, so this must come first.
@@ -157,6 +157,15 @@ test/                unit, background integration, and UI-boot suites
 
 Chrome requires an MV3 service worker and Firefox only supports an event page, so
 `scripts/build.mjs` merges the right `background` block into each target's manifest.
+
+## Roadmap (deliberately deferred)
+
+- **Visit stats** (`visits`/`last_visit` + optional `history` permission): removed for now —
+  snapshot semantics confused users and live counts would contradict the resource-gentleness goal.
+- **Account flag**: superseded by the note field.
+- **`site` / `reading` columns** (og:site_name, estimated reading time): captured but rarely
+  surfaced anywhere useful; deferred until the display story earns them.
+- **Opt-in remote error reporting**: local journal only until there's a user base to justify it.
 
 ## Honest limitations
 

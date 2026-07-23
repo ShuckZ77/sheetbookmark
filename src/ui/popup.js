@@ -3,7 +3,9 @@ import { api, isSyncable } from '../lib/browser.js';
 const $ = (id) => document.getElementById(id);
 const send = (message) => api.runtime.sendMessage(message);
 
-const state = { rows: [], query: '', browser: null, sheetId: '' };
+const RENDER_CHUNK = 60;
+
+const state = { rows: [], query: '', browser: null, sheetId: '', renderLimit: RENDER_CHUNK };
 
 const RELATIVE_UNITS = [
   ['year', 365 * 24 * 3600e3],
@@ -90,8 +92,58 @@ function renderChips() {
 function matches(row) {
   if (state.browser && row.browser !== state.browser) return false;
   if (!state.query) return true;
-  const haystack = `${row.title} ${row.url} ${row.description} ${row.folder}`.toLowerCase();
+  const haystack = `${row.title} ${row.url} ${row.note} ${row.folder}`.toLowerCase();
   return state.query.split(/\s+/).every((term) => haystack.includes(term));
+}
+
+let openEditor = null; // exactly one note editor exists at a time, whatever the list size
+
+function closeEditor() {
+  openEditor?.remove();
+  openEditor = null;
+}
+
+function editNote(item, row) {
+  if (openEditor?.parentElement === item) return closeEditor();
+  closeEditor();
+
+  const editor = document.createElement('div');
+  editor.className = 'note-editor';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 500;
+  input.placeholder = 'Add a note…';
+  input.value = row.note ?? '';
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'btn-primary note-save';
+  save.textContent = 'Save';
+
+  const commit = async () => {
+    save.disabled = true;
+    const result = await send({ type: 'setNote', tab: row.tab, id: row.id, note: input.value });
+    if (result?.ok) {
+      row.note = result.note;
+      closeEditor();
+    } else {
+      save.disabled = false;
+      input.placeholder = result?.error ?? 'Could not save note';
+      input.value = '';
+    }
+  };
+
+  save.onclick = commit;
+  input.onkeydown = (event) => {
+    if (event.key === 'Enter') commit();
+    if (event.key === 'Escape') closeEditor();
+  };
+
+  editor.append(input, save);
+  item.append(editor);
+  openEditor = editor;
+  input.focus();
 }
 
 function buildRow(row, index) {
@@ -100,6 +152,9 @@ function buildRow(row, index) {
   const item = document.createElement('li');
   item.className = 'row';
   item.style.setProperty('--i', String(Math.min(index, 14)));
+
+  const line = document.createElement('div');
+  line.className = 'row-line';
 
   const button = document.createElement('button');
   button.className = 'row-btn';
@@ -143,17 +198,38 @@ function buildRow(row, index) {
   const body = document.createElement('span');
   body.className = 'row-body';
   body.append(title, meta);
-
   button.append(monogram, body);
-  item.append(button);
+
+  const noteButton = document.createElement('button');
+  noteButton.className = `note-btn${row.note ? ' has-note' : ''}`;
+  noteButton.type = 'button';
+  noteButton.title = row.note ? `Note: ${row.note}` : 'Add a note';
+  noteButton.textContent = '✎';
+  noteButton.onclick = () => editNote(item, row);
+
+  line.append(button, noteButton);
+  item.append(line);
   return item;
 }
 
+/** Fires only when the list bottom scrolls into view; renders the next chunk. */
+const moreObserver = new IntersectionObserver((entries) => {
+  if (entries.some((entry) => entry.isIntersecting)) {
+    state.renderLimit += RENDER_CHUNK;
+    render();
+  }
+});
+
 function render() {
+  closeEditor();
+  moreObserver.disconnect();
+
   const visible = state.rows.filter(matches);
   renderChips();
 
-  $('list').replaceChildren(...visible.slice(0, 300).map(buildRow));
+  const shown = visible.slice(0, state.renderLimit).map(buildRow);
+  $('list').replaceChildren(...shown);
+  if (visible.length > state.renderLimit && shown.length) moreObserver.observe(shown[shown.length - 1]);
   $('empty').classList.toggle('hidden', visible.length > 0);
 
   const total = state.rows.length;
@@ -194,10 +270,11 @@ async function authorize() {
 
 /**
  * Page details, readable here because the toolbar click grants activeTab. Ctrl+D captures
- * can't run this without <all_urls>, so only toolbar saves carry them. Text the user has
- * selected on the page wins over the meta description — highlight a sentence, hit Save,
- * and it becomes the note.
+ * can't run this without <all_urls>, so only toolbar saves carry them. The note field is
+ * pre-filled from the user's selection (first choice) or the page description — and is
+ * theirs to edit before saving.
  */
+let pageDetails = {};
 async function readPageDetails(tabId) {
   try {
     const [injection] = await api.scripting.executeScript({
@@ -233,24 +310,25 @@ async function saveActiveTab() {
       return;
     }
 
-    const page = await readPageDetails(tab.id);
     const result = await send({
       type: 'saveTab',
       tab: {
         title: tab.title ?? '',
         url: tab.url,
-        // A deliberate selection is a better note than boilerplate marketing copy.
-        description: ((page.selection || page.description) ?? '').trim().slice(0, 500),
-        site: (page.site ?? '').slice(0, 120),
-        reading: page.words ? `${Math.max(1, Math.round(page.words / 220))} min` : '',
-        account: $('account-flag').checked ? 'yes' : '',
+        note: $('note').value.trim().slice(0, 500),
       },
     });
-    $('account-flag').checked = false;
     if (result?.ok) {
       label.textContent = result.deduped ? 'Already saved' : 'Saved ✓';
+      button.classList.add('pop');
+      setTimeout(() => button.classList.remove('pop'), 400);
       alreadySaved = true;
-      await loadRows({ force: true });
+      // The row we just wrote goes straight on top — no network round-trip needed.
+      if (result.row) {
+        state.rows.unshift(result.row);
+        render();
+      }
+      $('note').value = '';
     } else if (result?.needsAuth) {
       label.textContent = 'Sign in needed';
       setPill('Sign in needed', 'warn');
@@ -267,15 +345,20 @@ async function saveActiveTab() {
   }
 }
 
-/** The button tells the truth on open: a page already in the sheet reads "Already saved". */
+/**
+ * On open: the button tells the truth (already-saved pages say so), and the note field
+ * is pre-filled so saving with a note is one glance and one click.
+ */
 async function showActiveTabState() {
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
   $('save-sub').textContent = tab?.title ?? '';
-  if (tab?.url) {
-    const result = await send({ type: 'isSaved', url: tab.url });
-    alreadySaved = Boolean(result?.saved);
-    paintSaveState();
-  }
+  if (!tab?.url) return;
+
+  const [saved, page] = await Promise.all([send({ type: 'isSaved', url: tab.url }), readPageDetails(tab.id)]);
+  alreadySaved = Boolean(saved?.saved);
+  paintSaveState();
+  pageDetails = page;
+  if (!$('note').value) $('note').value = ((page.selection || page.description) ?? '').trim().slice(0, 500);
 }
 
 async function init() {
@@ -293,6 +376,7 @@ async function init() {
   $('save-tab').onclick = saveActiveTab;
   $('search').oninput = (event) => {
     state.query = event.target.value.trim().toLowerCase();
+    state.renderLimit = RENDER_CHUNK;
     render();
   };
 

@@ -21,3 +21,6 @@ client_secret*.json
 # .keys/client-id.txt      – OAuth client ID; public by design, ships inside every
 #                            built extension and is readable by anyone who unzips a
 #                            store package. Committing it keeps builds reproducible.
+
+# Local-only: marketing plans and drafts never reach the public repo
+private/

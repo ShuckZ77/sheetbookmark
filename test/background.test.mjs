@@ -46,7 +46,6 @@ const listeners = {};
 const alarms = {};
 let createdBookmarks = [];
 let bookmarkSearchResults = [];
-let historyVisits = {};
 
 const chrome = {
   storage: { local: makeArea(), session: makeArea() },
@@ -73,7 +72,6 @@ const chrome = {
     onAlarm: { addListener: (fn) => (listeners.alarm = fn) },
   },
   action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
-  history: { getVisits: async ({ url }) => historyVisits[url] ?? [] },
   identity: {
     getRedirectURL: () => 'https://ext.chromiumapp.org/',
     launchWebAuthFlow: async ({ url }) => {
@@ -89,7 +87,7 @@ globalThis.__BOOKMARK_CLIENT_ID__ = 'test-client.apps.googleusercontent.com';
 await import('../src/background.js');
 const { toISTStamp } = await import('../src/lib/store.js');
 
-const HEADER_ORDER = ['timestamp', 'id', 'folder', 'browser', 'profile', 'os', 'source', 'title', 'url', 'description', 'site', 'reading', 'visits', 'last_visit', 'account'];
+const HEADER_ORDER = ['timestamp', 'id', 'folder', 'browser', 'profile', 'os', 'source', 'title', 'url', 'note'];
 const COLUMN = Object.fromEntries(HEADER_ORDER.map((name, index) => [name, index]));
 /** Builds a positional sheet row from named fields — survives any future column reorder. */
 const rowValues = (row) => HEADER_ORDER.map((name) => row[name] ?? '');
@@ -102,6 +100,7 @@ let nextStatus = () => 200;
 let driveFiles = [];
 let sheetTabs = [{ sheetId: 7, title: 'Test' }];
 let tabValues = {}; // tab title → array of row value-arrays
+let oldHeader = null; // set to simulate a tab created by an older schema
 
 function installFetch() {
   appended = [];
@@ -110,9 +109,9 @@ function installFetch() {
   driveFiles = [];
   sheetTabs = [{ sheetId: 7, title: 'Test' }];
   tabValues = {};
+  oldHeader = null;
   createdBookmarks = [];
   bookmarkSearchResults = [];
-  historyVisits = {};
 
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -148,14 +147,18 @@ function installFetch() {
     if (url.includes('values:batchGet')) {
       return reply({ valueRanges: sheetTabs.map((tab) => ({ values: tabValues[tab.title] ?? [] })) });
     }
-    if (url.includes('A1%3AO1')) return reply({ values: [HEADER] }); // header already present
+    if (url.includes('A1%3AJ1')) return reply({ values: [oldHeader ?? HEADER] });
     if (url.includes(':append')) {
       appended.push(...JSON.parse(init.body).values);
       return reply({});
     }
-    if (url.includes('A2%3AO')) {
-      const title = decodeURIComponent(url).match(/values\/'(.+)'!A2:O/)?.[1] ?? '';
+    if (url.includes('A2%3AJ')) {
+      const title = decodeURIComponent(url).match(/values\/'(.+)'!A2:J/)?.[1] ?? '';
       return reply({ values: tabValues[title] ?? [] });
+    }
+    if (url.includes('B2%3AB')) {
+      const title = decodeURIComponent(url).match(/values\/'(.+)'!B2:B/)?.[1] ?? '';
+      return reply({ values: (tabValues[title] ?? []).map((row) => [row[1]]) });
     }
     return reply({});
   };
@@ -194,7 +197,7 @@ test('saveTab appends one fully-populated row into this install’s own tab', as
   assert.equal(appended.length, 1);
 
   const appendCall = requests.find((request) => request.url.includes(':append'));
-  assert.ok(decodeURIComponent(appendCall.url).includes("'Test'!A:O"), 'row must land in the install’s own tab');
+  assert.ok(decodeURIComponent(appendCall.url).includes("'Test'!A:J"), 'row must land in the install’s own tab');
 
   const [row] = appended;
   assert.equal(row[COLUMN.url], 'https://alpha.example/');
@@ -247,7 +250,7 @@ test('a Ctrl+D re-bookmark also heals after sheet-side deletion', async () => {
 test('when the verify read fails, the cache is trusted and nothing duplicates', async () => {
   await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
   tabValues.Test = [];
-  nextStatus = (url) => (url.includes('A2%3AO') ? 500 : 200); // sheet read breaks
+  nextStatus = (url) => (url.includes('A2%3AJ') ? 500 : 200); // sheet read breaks
 
   const again = await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
   assert.equal(again.deduped, true, 'offline fallback refuses rather than risking duplicates');
@@ -277,7 +280,7 @@ test('a renamed own tab is followed by id, not recreated', async () => {
   await send({ type: 'saveTab', tab: { title: 'Alpha', url: 'https://alpha.example/' } });
 
   const appendCall = requests.find((request) => request.url.includes(':append'));
-  assert.ok(decodeURIComponent(appendCall.url).includes("'My Renamed Tab'!A:O"));
+  assert.ok(decodeURIComponent(appendCall.url).includes("'My Renamed Tab'!A:J"));
   assert.ok(!requests.some((request) => request.body?.requests?.[0]?.addSheet), 'no new tab was created');
 
   const { tabName } = await chrome.storage.local.get('tabName');
@@ -445,32 +448,70 @@ test('setSync reconfigures the alarm', async () => {
   assert.equal(bad.ok, false);
 });
 
-test('visit stats land in the row only when the user enabled them', async () => {
-  historyVisits['https://alpha.example/'] = [{ visitTime: 1700000000000 }, { visitTime: 1700000500000 }];
-
-  // Off by default: columns stay empty even though history has data.
-  await send({ type: 'saveTab', tab: { title: 'A', url: 'https://alpha.example/' } });
-  assert.equal(appended[0][COLUMN.visits], '', 'no history read without the opt-in');
-
-  await chrome.storage.local.set({ syncMode: 'instant', visitStats: true, seenUrls: [] });
-  await send({ type: 'saveTab', tab: { title: 'B', url: 'https://alpha.example/' } });
-
-  const row = appended[1];
-  assert.equal(row[COLUMN.visits], '2');
-  assert.equal(row[COLUMN.last_visit], toISTStamp(1700000500000), 'latest visit, in IST');
-});
-
-test('toolbar extras (site, reading, account) are written through', async () => {
-  await send({
+test('the note is written through and the saved row comes back for optimistic display', async () => {
+  const result = await send({
     type: 'saveTab',
-    tab: { title: 'A', url: 'https://alpha.example/', description: 'd', site: 'The Verge', reading: '7 min', account: 'yes' },
+    tab: { title: 'A', url: 'https://alpha.example/', note: 'my note' },
   });
 
   const [row] = appended;
-  assert.equal(row[COLUMN.site], 'The Verge');
-  assert.equal(row[COLUMN.reading], '7 min');
-  assert.equal(row[COLUMN.account], 'yes');
-  assert.equal(row[COLUMN.description], 'd');
+  assert.equal(row[COLUMN.note], 'my note');
+  assert.equal(result.row.note, 'my note', 'row returned to the popup');
+  assert.equal(result.row.tab, 'Test', 'tagged with its sheet tab');
+});
+
+test('setNote finds the row by id and rewrites exactly one cell', async () => {
+  tabValues.Test = [
+    rowValues({ timestamp: 't1', id: 'row-a', title: 'A', url: 'https://a.example/' }),
+    rowValues({ timestamp: 't2', id: 'row-b', title: 'B', url: 'https://b.example/' }),
+  ];
+
+  const result = await send({ type: 'setNote', tab: 'Test', id: 'row-b', note: '  remember this  ' });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.note, 'remember this', 'trimmed');
+  const update = requests.find((r) => r.method === 'PUT' && decodeURIComponent(r.url).includes("'Test'!J3"));
+  assert.ok(update, 'PUT lands on the note column of sheet row 3 (header + 2nd data row)');
+  assert.deepEqual(update.body.values, [['remember this']]);
+});
+
+test('setNote on a row deleted from the sheet fails with a clear message', async () => {
+  tabValues.Test = [];
+  const result = await send({ type: 'setNote', tab: 'Test', id: 'ghost', note: 'x' });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /no longer exists/);
+});
+
+test('a tab with an outdated header is refused, not scrambled', async () => {
+  await chrome.storage.local.set({ sheetId: '', tabId: null, tabName: '' });
+  driveFiles = [{ id: 'OLD', name: 'My SheetBookmark Collection' }];
+  sheetTabs = [{ sheetId: 7, title: 'Test' }];
+  oldHeader = ['timestamp', 'browser', 'profile', 'os', 'title', 'url', 'folder', 'source', 'id'];
+
+  const result = await send({ type: 'connect' });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /older version/i, 'user gets an actionable message');
+  assert.equal(appended.length, 0, 'nothing was written into the misaligned tab');
+});
+
+test('instant mode schedules a retry alarm only while the queue is non-empty', async () => {
+  delete alarms.sync;
+
+  // A failed flush leaves the row queued → the retry alarm must exist.
+  await chrome.storage.session.clear();
+  const original = chrome.identity.launchWebAuthFlow;
+  chrome.identity.launchWebAuthFlow = async () => {
+    throw new Error('User interaction required.');
+  };
+  await send({ type: 'saveTab', tab: { title: 'A', url: 'https://a.example/' } });
+  assert.equal(alarms.sync?.periodInMinutes, 1, 'retry alarm scheduled while a row waits');
+
+  // Sign-in returns, queue drains → the alarm is cleared: zero idle wakeups.
+  chrome.identity.launchWebAuthFlow = original;
+  await send({ type: 'authorize' });
+  await settle(30);
+  assert.equal(alarms.sync, undefined, 'no standing alarm once the queue is empty');
 });
 
 // --- Sheet → browser import -------------------------------------------------

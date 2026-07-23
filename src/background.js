@@ -3,6 +3,8 @@ import { AuthError, getToken, invalidateToken } from './lib/auth.js';
 import { api, detectBrowser, detectOs, flattenTree, folderPathOf, isSyncable } from './lib/browser.js';
 import {
   appendRows,
+  findRowById,
+  updateNoteCell,
   createSheet,
   ensureOwnTab,
   findAppSheets,
@@ -20,8 +22,8 @@ const FLUSH_DEBOUNCE_MS = 1500;
 const CACHE_TTL_MS = 60_000;
 const IMPORT_FOLDER = 'SheetBookmark';
 
-/** Minutes between alarm firings per mode. 'instant' keeps a 1-minute retry for offline queues. */
-const ALARM_MINUTES = { instant: 1, 15: 15, 60: 60, 480: 480, 1440: 1440 };
+/** Interval modes run a standing alarm; instant mode schedules one only while the queue is non-empty. */
+const ALARM_MINUTES = { 15: 15, 60: 60, 480: 480, 1440: 1440 };
 
 /**
  * The browser's own bookmark sync can fire hundreds of onCreated events at once, and
@@ -44,38 +46,12 @@ let environmentPromise;
 const environment = () =>
   (environmentPromise ??= Promise.all([detectBrowser(), detectOs()]).then(([browser, os]) => ({ browser, os })));
 
-/**
- * Visit statistics for a URL, only when the user enabled the optional history permission.
- * A snapshot at save time: rows are append-only, so counts are "as of when you saved it".
- */
-async function visitStatsFor(url) {
-  const { visitStats } = await store.getSettings();
-  if (!visitStats || !api.history) return {};
-  try {
-    const visits = await api.history.getVisits({ url });
-    if (!visits.length) return {};
-    const last = Math.max(...visits.map((visit) => visit.visitTime ?? 0));
-    return { visits: String(visits.length), last_visit: last ? store.toISTStamp(last) : '' };
-  } catch {
-    return {};
-  }
-}
-
-async function buildRow({ title, url, description = '', site = '', reading = '', account = '', folder = '', source, timestamp }) {
-  const [{ browser, os }, { profileLabel }, stats] = await Promise.all([
-    environment(),
-    store.getSettings(),
-    visitStatsFor(url),
-  ]);
+async function buildRow({ title, url, note = '', folder = '', source, timestamp }) {
+  const [{ browser, os }, { profileLabel }] = await Promise.all([environment(), store.getSettings()]);
   return {
     timestamp: timestamp ?? store.toISTStamp(),
     title,
-    description,
-    site,
-    reading,
-    visits: stats.visits ?? '',
-    last_visit: stats.last_visit ?? '',
-    account,
+    note,
     folder,
     browser,
     profile: profileLabel,
@@ -204,10 +180,11 @@ async function record(candidates, { verify = false } = {}) {
       await store.setQueue([...(await store.getQueue()), ...rows]);
     }
 
-    return { added: rows.length, skipped: candidates.length - rows.length };
+    return { added: rows.length, skipped: candidates.length - rows.length, rows };
   });
 
   await updateBadge();
+  await updateRetryAlarm();
   return result;
 }
 
@@ -241,6 +218,7 @@ async function flush({ interactive = false } = {}) {
     await store.setSettings({ lastSyncAt: Date.now() });
     await store.setCache([]);
     await setNeedsAuth(false);
+    await updateRetryAlarm();
     return { ok: true, written: pending.length };
   } catch (error) {
     if (error instanceof AuthError && error.needsInteraction) {
@@ -260,6 +238,22 @@ async function configureAlarm() {
   await api.alarms.clear(SYNC_ALARM);
   const minutes = ALARM_MINUTES[syncMode];
   if (minutes) api.alarms.create(SYNC_ALARM, { periodInMinutes: minutes });
+  else await updateRetryAlarm();
+}
+
+/**
+ * Resource gentleness: in instant mode the worker is woken for retries ONLY while
+ * bookmarks are actually waiting. Empty queue → no alarm → zero background wakeups.
+ */
+async function updateRetryAlarm() {
+  const { syncMode } = await store.getSettings();
+  if (syncMode in ALARM_MINUTES) return; // interval modes own the alarm
+  const queue = await store.getQueue();
+  if (queue.length && syncMode === 'instant') {
+    api.alarms.create(SYNC_ALARM, { periodInMinutes: 1 });
+  } else {
+    await api.alarms.clear(SYNC_ALARM);
+  }
 }
 
 // --- Message handlers -------------------------------------------------------
@@ -286,23 +280,29 @@ async function handleStatus() {
 async function handleSaveTab({ tab }) {
   if (!isSyncable(tab?.url)) return { ok: false, error: 'unsupported' };
 
-  const { added } = await record([
+  const { added, rows } = await record([
     {
       title: tab.title || tab.url,
       url: tab.url,
-      description: (tab.description ?? '').slice(0, 500),
-      site: tab.site ?? '',
-      reading: tab.reading ?? '',
-      account: tab.account ?? '',
+      note: (tab.note ?? '').slice(0, 500),
       source: 'toolbar',
     },
   ], { verify: true });
   if (!added) return { ok: true, deduped: true };
 
-  return flush();
+  const result = await flush();
+  if (!result.ok) return result;
+
+  // Hand the row back (tagged like cached rows) so the popup can show it on top
+  // instantly, and keep the cache consistent without a network re-read.
+  const { tabName } = await store.getSettings();
+  const row = { ...rows[0], tab: tabName };
+  const cache = await store.getCache();
+  if (cache?.rows) await store.setCache([row, ...cache.rows]);
+  return { ...result, row };
 }
 
-const flattenTabs = (tabs) => tabs.flatMap((tab) => tab.rows);
+const flattenTabs = (tabs) => tabs.flatMap((tab) => tab.rows.map((row) => ({ ...row, tab: tab.title })));
 
 /**
  * Reads the whole sheet, refreshes the popup cache, and rebuilds the seen-set from what
@@ -477,6 +477,32 @@ async function handleImportFromSheet() {
   return { ok: true, imported: fresh.length, folder: IMPORT_FOLDER };
 }
 
+/**
+ * Post-save note editing: locate the row by immutable id (survives sorting/deletion in
+ * the Sheets UI), rewrite exactly one cell, patch the cache in place. Two tiny API
+ * calls, only ever on an explicit click.
+ */
+async function handleSetNote({ tab, id, note }) {
+  const { sheetId } = await store.getSettings();
+  if (!sheetId || !tab || !id) return { ok: false, error: 'Not connected' };
+
+  const trimmed = String(note ?? '').trim().slice(0, 500);
+  const done = await callSheets(async (token) => {
+    const rowNumber = await findRowById(token, sheetId, tab, id);
+    if (!rowNumber) return false;
+    await updateNoteCell(token, sheetId, tab, rowNumber, trimmed);
+    return true;
+  }, { interactive: true });
+
+  if (!done) return { ok: false, error: 'That row no longer exists in the sheet.' };
+
+  const cache = await store.getCache();
+  if (cache?.rows) {
+    await store.setCache(cache.rows.map((row) => (row.id === id ? { ...row, note: trimmed } : row)));
+  }
+  return { ok: true, note: trimmed };
+}
+
 async function handleDisconnect() {
   await invalidateToken();
   await store.setSettings({ sheetId: '', tabId: null, needsAuth: false });
@@ -492,6 +518,7 @@ const HANDLERS = {
   listRows: handleListRows,
   connect: handleConnect,
   disconnect: handleDisconnect,
+  setNote: handleSetNote,
   syncNow: handleSyncNow,
   setSync: handleSetSync,
   importFromSheet: handleImportFromSheet,

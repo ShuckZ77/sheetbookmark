@@ -35,8 +35,5 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "optional_permissions": [
-    "history"
-  ],
   "homepage_url": "https://shuckz77.github.io/sheetbookmark/"
 }

@@ -8,7 +8,7 @@ right sequence and is how this guide is ordered.
 APIs + OAuth **free**, no billing account.
 
 Companion docs: [TESTING.md](TESTING.md) (try it locally first) · [ANALYTICS.md](ANALYTICS.md)
-(what you can measure) · [PRIVACY.md](PRIVACY.md) (host this — every store demands the URL).
+(what you can measure) · [PRIVACY.md](../docs/PRIVACY.md) (host this — every store demands the URL).
 
 ---
 
@@ -228,8 +228,7 @@ Everything is automatic except one Chrome opt-in — full walkthrough in
 | `bookmarks` | Reads the user's bookmarks to sync them to that spreadsheet, and listens for `bookmarks.onCreated` so bookmarks saved with Ctrl/Cmd+D are captured. Writes happen in exactly one case: when the user clicks "Get bookmarks from other browsers", new bookmarks are created inside a dedicated "SheetBookmark" folder. Nothing is ever modified or deleted. |
 | `storage` | Stores the user's settings (sync cadence, profile label), the id of the spreadsheet and tab the extension created, a queue of bookmarks not yet uploaded, and the list of already-synced URLs used to avoid duplicates. |
 | `activeTab` | When the user clicks the toolbar button, reads the title and URL of the current tab so it can be saved. Only on an explicit click. |
-| `history` (optional) | Requested at runtime only if the user enables "record visit count". Reads visit count and last-visit time for a page being bookmarked, locally, at save time; written only into the user's own spreadsheet. Never requested at install. |
-| `scripting` | Used together with activeTab, only on that same explicit click, to read the page's meta description so the sheet's description column can be filled. Never runs on any other page or event. |
+| `scripting` | Used together with activeTab, only on that same explicit click, to read the page's meta description and the user's selected text so the save popup can pre-fill the bookmark's note. Never runs on any other page or event. |
 | `alarms` | Runs the sync schedule the user picks (instant with retry, or every 15 min / 1 h / 8 h / 24 h), and retries uploads that were queued while offline. |
 | `https://sheets.googleapis.com/*` | Calls the Google Sheets API to create the bookmark spreadsheet, manage each browser's tab, and read and append rows. |
 | `https://www.googleapis.com/*` | Calls the Google Drive API to find or verify the spreadsheet the extension created, under the `drive.file` scope. |

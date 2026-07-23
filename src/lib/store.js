@@ -18,7 +18,6 @@ const DEFAULTS = {
   profileLabel: '',
   captureNative: true,
   syncMode: 'instant',
-  visitStats: false,
   lastSyncAt: 0,
   importDone: false,
   needsAuth: false,

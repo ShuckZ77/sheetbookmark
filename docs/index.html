@@ -165,11 +165,11 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
     </div>
     <div class="ms-tabs"><span class="on">Chrome — MacBook</span><span>Firefox — Home</span><span>Edge — Office</span></div>
     <table>
-      <tr><th>title</th><th>reading</th><th>saved</th></tr>
-      <tr class="row-new"><td class="t">MCP documentation</td><td>9 min</td><td>just now</td></tr>
-      <tr><td class="t">The Verge — AI newsletter</td><td>—</td><td>2 h ago</td></tr>
-      <tr><td class="t">Perfect dal tadka</td><td>4 min</td><td>yesterday</td></tr>
-      <tr><td class="t">Bugzilla #1635344</td><td>12 min</td><td>Jul 20</td></tr>
+      <tr><th>title</th><th>note</th><th>saved</th></tr>
+      <tr class="row-new"><td class="t">MCP documentation</td><td>“resources expose data…”</td><td>just now</td></tr>
+      <tr><td class="t">The Verge — AI newsletter</td><td></td><td>2 h ago</td></tr>
+      <tr><td class="t">Perfect dal tadka</td><td>double the ghee</td><td>yesterday</td></tr>
+      <tr><td class="t">Bugzilla #1635344</td><td>the Firefox OAuth saga</td><td>Jul 20</td></tr>
     </table>
   </div>
 </div></header>
@@ -182,8 +182,8 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
     <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5zM9 8v12M15 8v12"/></svg></div><h3>A tab per browser</h3><p>Chrome, Firefox and Edge each write to their own tab in the same spreadsheet — nothing ever overlaps or overwrites. Rename tabs or the sheet freely; sync follows the file, not the name.</p></div>
     <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.5"/></svg></div><h3>Your cadence</h3><p>Instant by default — a starred page appears in the sheet within seconds. Prefer batches? Every 15 minutes, hourly, daily, or manual-only with a pending-count badge.</p></div>
     <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M7 4 3.5 7.5 7 11M3.5 7.5H17M17 13l3.5 3.5L17 20M20.5 16.5H7"/></svg></div><h3>Both directions</h3><p>Read and search every browser's bookmarks from the popup. One click pulls what your other browsers saved into this one — additive only, nothing is ever deleted.</p></div>
-    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h16M4 20v-3L14.5 6.5a2.1 2.1 0 0 1 3 3L7 20zM12.5 8.5l3 3"/></svg></div><h3>Rich capture</h3><p>Toolbar saves grab the page description — or the exact text you highlighted — plus site name and reading time. The description column doubles as your notes field.</p></div>
-    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-8M21 19H3"/></svg></div><h3>Opt-in visit stats</h3><p>Enable it and each save records how often you visited the page and when last — read locally from your browser history, written only into your own sheet.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h16M4 20v-3L14.5 6.5a2.1 2.1 0 0 1 3 3L7 20zM12.5 8.5l3 3"/></svg></div><h3>Notes that follow you</h3><p>Every bookmark in the popup has a ✎ — add or edit its note any time, from any browser. The extension rewrites exactly one cell in your sheet, nothing else.</p></div>
+    <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M20 5c-6 0-11 3-13.5 8.5L4 20M6.5 14.5C8 15 11 15 13 13M9 9.5c1.5.5 4 .5 5.5-.5M4.5 17.5c3.5 1 8.5.5 11.5-2.5 3-3 4-7 4-10-2.5 0-5 .5-7.5 2"/></svg></div><h3>Feather-light by design</h3><p>No content scripts, no background polling, zero idle wakeups — the extension does nothing at all until you bookmark something. Your browser won't notice it exists.</p></div>
     <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="9" rx="1.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10M12 14v2"/></svg></div><h3>Radically private</h3><p>No server, no telemetry, no account. Google's <code>drive.file</code> scope means the extension can only touch the one spreadsheet it created — enforced by Google, not promised by us.</p></div>
   </div>
 </div></section>
@@ -204,13 +204,13 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
   <p class="lede">A stable core of columns (A–I) that never changes, then optional extras appended at the tail. Sort it, filter it, add your own columns after the last one — it's a normal spreadsheet, because it is one.</p>
   <div class="sheet-demo">
     <div class="table-scroll"><table>
-      <tr><th>timestamp</th><th>id</th><th>folder</th><th>browser</th><th>profile</th><th>os</th><th>source</th><th>title</th><th>url</th><th>description</th><th>site</th><th>reading</th><th>visits</th><th>last_visit</th><th>account</th></tr>
-      <tr><td>2026-07-22T14:41:07+05:30</td><td>a1f4…</td><td>Bookmarks Bar</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>toolbar</td><td class="t">Model Context Protocol docs</td><td>modelcontextprotocol.io</td><td>Highlighted: “resources are how servers expose data…”</td><td>MCP</td><td>9 min</td><td>12</td><td>2026-07-21T09:12:44+05:30</td><td></td></tr>
-      <tr><td>2026-07-22T11:03:52+05:30</td><td>b7c2…</td><td>Reading</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>native</td><td class="t">The Verge — AI newsletter</td><td>theverge.com/ai</td><td></td><td></td><td></td><td>3</td><td>2026-07-22T10:58:01+05:30</td><td></td></tr>
-      <tr><td>2026-07-20T19:22:10+05:30</td><td>c9d8…</td><td>Recipes</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>toolbar</td><td class="t">Perfect dal tadka</td><td>ranveerbrar.com/dal</td><td>Soak 30 min, double the ghee.</td><td>Chef Ranveer</td><td>4 min</td><td></td><td></td><td>yes</td></tr>
+      <tr><th>timestamp</th><th>id</th><th>folder</th><th>browser</th><th>profile</th><th>os</th><th>source</th><th>title</th><th>url</th><th>note</th></tr>
+      <tr><td>2026-07-22T14:41:07+05:30</td><td>a1f4…</td><td>Bookmarks Bar</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>toolbar</td><td class="t">Model Context Protocol docs</td><td>modelcontextprotocol.io</td><td>“resources are how servers expose data…”</td></tr>
+      <tr><td>2026-07-22T11:03:52+05:30</td><td>b7c2…</td><td>Reading</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>native</td><td class="t">The Verge — AI newsletter</td><td>theverge.com/ai</td><td></td></tr>
+      <tr><td>2026-07-20T19:22:10+05:30</td><td>c9d8…</td><td>Recipes</td><td>Chrome</td><td>Chrome — MacBook</td><td>macOS</td><td>toolbar</td><td class="t">Perfect dal tadka</td><td>ranveerbrar.com/dal</td><td>Soak 30 min, double the ghee.</td></tr>
     </table></div>
   </div>
-  <p class="note"><b>source</b> tells you how each row arrived: <code>toolbar</code> (button — carries description, site, reading time), <code>native</code> (Ctrl/Cmd+D), or <code>import</code> (initial upload, keeping original dates). <b>visits</b>/<b>last_visit</b> fill only if you enable visit stats. Deleting a row makes that page saveable again — the sheet is the source of truth.</p>
+  <p class="note"><b>source</b> tells you how each row arrived: <code>toolbar</code> (button — carries your note), <code>native</code> (Ctrl/Cmd+D), or <code>import</code> (initial upload, keeping original dates). The <b>note</b> is yours — pre-filled at save time, editable in the popup or the sheet, never overwritten by sync. Deleting a row makes that page saveable again — the sheet is the source of truth.</p>
 </div></section>
 
 <section id="privacy"><div class="wrap">
@@ -232,7 +232,7 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
   <details><summary>How do I sync bookmarks between Chrome and Firefox?</summary><p>Install SheetBookmark in both, click <em>Connect Google Sheets</em> in each with the same Google account. Chrome finds the sheet Firefox created (or vice versa) and adds its own tab. The popup in either browser shows both collections; “Get bookmarks from other browsers” copies them into the local bookmark bar.</p></details>
   <details><summary>Does it work across computers?</summary><p>Yes — the sheet lives in your Google Drive, so any install connected to the same Google account joins it, on any machine or OS.</p></details>
   <details><summary>What happens if I delete a row, rename the sheet, or move it?</summary><p>Rename and move anything — sync follows the file's identity, not its name or location. Deleting a row tells the extension that page is no longer saved, so bookmarking it again writes a fresh row.</p></details>
-  <details><summary>Can it read my passwords or browsing history?</summary><p>Passwords: no — browsers expose no such API to extensions, and we wouldn't want one. History: only if you enable the optional visit-stats toggle, which triggers the browser's own permission prompt; it's read locally at save time and written only into your sheet.</p></details>
+  <details><summary>Can it read my passwords or browsing history?</summary><p>Neither. Browsers expose no password API to extensions, and SheetBookmark requests no history access. It reads a page's content only at the moment you click Save on it — nothing else, ever.</p></details>
   <details><summary>Something broke — how do I report it?</summary><p>Options page → Support → <em>Report a problem</em>. It opens a GitHub issue pre-filled with your version, browser and recent on-device error entries (URLs scrubbed) — you see and can edit everything before submitting. Nothing is ever sent automatically.</p></details>
   <details><summary>Is it really free?</summary><p>Yes. It's open-source, has no server costs to recoup, and Google Sheets is free. There is nothing to upsell.</p></details>
   </div>
@@ -244,9 +244,6 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
     <a href="https://github.com/ShuckZ77/sheetbookmark">GitHub</a>
     <a href="https://github.com/ShuckZ77/sheetbookmark/issues/new">Report an issue</a>
     <a href="PRIVACY.html">Privacy</a>
-    <a href="PUBLISHING.html">Publishing guide</a>
-    <a href="TESTING.html">Testing guide</a>
-    <a href="ANALYTICS.html">Analytics guide</a>
   </div>
 </div></footer>
 
