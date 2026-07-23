@@ -212,9 +212,13 @@ OAuth app **In production**; fresh artifact via `npm test && npm run zip`.
    **permanent**. Verification typically **3–5 business days** — you can prepare meanwhile.
 2. *Create new extension* → upload `dist/sheetbookmark-chrome-<version>.zip` (Edge consumes the
    Chromium zip; the extra `browser_specific_settings` key is ignored). **Do not submit yet.**
-3. Copy the **extension ID** from the product page → add
-   `https://<that-id>.chromiumapp.org/` to the Google OAuth client. Skipping this bricks Connect
-   for the reviewer and every Edge user.
+3. Partner Center's **Extension identity** panel shows four identifiers — the one you need is
+   labelled **CRX ID** (32 letters a–p; it's derived from the Public key shown beside it, so it's
+   the id every Edge install actually runs under). Add
+   `https://<CRX-ID>.chromiumapp.org/` to the Google OAuth client. Skipping this bricks Connect
+   for the reviewer and every Edge user. The other identifiers: **Store ID** becomes part of your
+   public listing URL after publishing (use it in marketing links); **Product ID** is Partner
+   Center internal — never needed elsewhere.
 4. Listing quirks that surprise people:
    - **Description must be 250–10,000 characters** — too short fails form validation.
    - **Name, short description and description come from the manifest and are read-only** in
@@ -264,6 +268,82 @@ Everything is automatic except one Chrome opt-in — full walkthrough in
 
 ## Store-form answers (copy-paste)
 
+**Short description / summary** (all stores):
+> Sync bookmarks from every browser into one Google Sheet in your own Drive — a tab per browser, searchable everywhere, no server.
+
+**Long description** (AMO Description field · Edge Description field · Chrome detailed description —
+plain text, first 250 characters are the complete pitch, ≥250 chars as Edge requires):
+
+```
+Sync your bookmarks from Chrome, Firefox and Edge into one Google Sheet in your own Drive. Bookmark normally — Ctrl+D or one click — and the page appears in your spreadsheet within seconds, in a separate tab per browser. No server. No account. No tracking.
+
+Browser sync only syncs a browser with itself. SheetBookmark syncs your bookmarking — across browsers, machines and profiles — into a file you own, can open anywhere, sort, filter, and keep forever.
+
+WHAT IT DOES
+
+•  One Google Sheet, a tab per browser — Chrome, Firefox and Edge each write to their own tab; nothing ever overlaps. Rename the sheet or its tabs freely — sync follows the file, not the name.
+
+•  Your cadence — instant by default, or batch every 15 minutes / hour / 8 hours / day, or manual-only with a pending-count badge on the icon.
+
+•  Search everything, everywhere — the popup shows all your browsers' bookmarks together; one click opens any of them.
+
+•  Notes on every bookmark — the save popup pre-fills a note from the text you highlighted on the page; edit it before saving, or add a note to any row later with its ✎ button, from any browser.
+
+•  Two-way — pull what your other browsers saved into this one; additive only, nothing is ever deleted.
+
+•  Feather-light — no content scripts, no background polling, zero idle wakeups; it does nothing at all until you bookmark something.
+
+YOUR DATA STAYS YOURS
+
+All data goes into a Google Sheet in YOUR OWN Google Drive — and nowhere else. There is no developer server, no analytics, no telemetry.
+
+•  Uses only Google's narrow drive.file permission — the extension can access the one spreadsheet it creates and nothing else in your Drive, enforced by Google itself.
+
+•  Your sign-in token lives in session memory only, never written to disk.
+
+•  The sheet is the source of truth — deleting a row simply makes that page saveable again.
+
+GETTING STARTED
+
+1. Install, click "Connect Google Sheets", approve — one consent screen.
+2. The extension creates "My SheetBookmark Collection" in your Drive — or finds the one your other browser already made — and imports your existing bookmarks.
+3. Bookmark as you always did.
+
+Free and open source (AGPL-3.0): https://github.com/ShuckZ77/sheetbookmark
+Report a problem: https://github.com/ShuckZ77/sheetbookmark/issues
+```
+
+For AMO specifically: the "collects bookmarks and website content" consent-prompt explainer line
+may be added under YOUR DATA STAYS YOURS. For Chrome: same text works in the detailed description.
+
+**Host permission justification** (Edge asks for one combined field; Chrome asks per host — use the
+same text):
+
+```
+The extension requests exactly two host permissions, both Google API endpoints required for its single purpose (syncing the user's bookmarks to a spreadsheet in the user's own Google Drive):
+
+https://sheets.googleapis.com/* — calls the Google Sheets API to create the user's bookmark spreadsheet, manage its per-browser tabs, and read and append bookmark rows.
+
+https://www.googleapis.com/* — calls the Google Drive API (files.list/files.get) to find or verify the spreadsheet the extension itself created, under Google's narrow drive.file scope, which limits access to only that one file.
+
+No other hosts are requested. The extension injects no content scripts and never communicates with any developer-owned or third-party server — all traffic goes exclusively to Google's APIs, authorized by the user via OAuth.
+```
+
+**Edge search terms** (budget: 7 terms, ≤30 chars each, ≤21 words total — this set uses 17;
+category anchor + action intents + platform + differentiator + long-tail; no competitor brand
+names — metadata-policy risk):
+
+```
+bookmark manager
+sync bookmarks
+export bookmarks
+google sheets
+bookmark backup
+cross browser bookmarks
+save bookmarks to sheets
+```
+
+
 **Single purpose:**
 > Sync the user's browser bookmarks to a single Google Sheet in their own Google Drive — one tab
 > per browser — so that bookmarks saved in one browser can be searched, opened, and optionally
@@ -279,8 +359,11 @@ Everything is automatic except one Chrome opt-in — full walkthrough in
 | `activeTab` | When the user clicks the toolbar button, reads the title and URL of the current tab so it can be saved. Only on an explicit click. |
 | `scripting` | Used together with activeTab, only on that same explicit click, to read the page's meta description and the user's selected text so the save popup can pre-fill the bookmark's note. Never runs on any other page or event. |
 | `alarms` | Runs the sync schedule the user picks (instant with retry, or every 15 min / 1 h / 8 h / 24 h), and retries uploads that were queued while offline. |
-| `https://sheets.googleapis.com/*` | Calls the Google Sheets API to create the bookmark spreadsheet, manage each browser's tab, and read and append rows. |
-| `https://www.googleapis.com/*` | Calls the Google Drive API to find or verify the spreadsheet the extension created, under the `drive.file` scope. |
+
+The extension requests exactly two host permissions, both Google API endpoints required for its single purpose (syncing the user's bookmarks to a spreadsheet in the user's own Google Drive):
+https://sheets.googleapis.com/* — calls the Google Sheets API to create the user's bookmark spreadsheet, manage its per-browser tabs, and read and append bookmark rows.
+https://www.googleapis.com/* — calls the Google Drive API (files.list/files.get) to find or verify the spreadsheet the extension itself created, under Google's narrow drive.file scope, which limits access to only that one file.
+No other hosts are requested. The extension injects no content scripts and never communicates with any developer-owned or third-party server — all traffic goes exclusively to Google's APIs, authorized by the user via OAuth.
 
 **Remote code:** No — MV3, everything bundled, plain source.
 **Data usage:** handles *website content* (bookmark titles/URLs) and *authentication information*

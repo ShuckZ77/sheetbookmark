@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SheetBookmark vs Raindrop, Pocket, Toby & browser sync — bookmark manager comparison 2026</title>
+<meta name="description" content="Honest comparison of ways to sync and manage bookmarks in 2026: SheetBookmark, Raindrop.io, Pocket (discontinued), Toby, and browser built-in sync — data ownership, cross-browser support, price, open source." />
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%23047857" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="%23fdfcf9"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>' />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"What is a good Pocket alternative after Pocket shut down?","acceptedAnswer":{"@type":"Answer","text":"Pocket was discontinued in July 2025. SheetBookmark is a free, open-source alternative for saving pages with notes — it stores everything in a Google Sheet in your own Drive, so a service shutdown can never take your collection with it."}},
+{"@type":"Question","name":"Is SheetBookmark a Raindrop.io alternative?","acceptedAnswer":{"@type":"Answer","text":"They solve the same problem with opposite philosophies. Raindrop is a polished cloud service that stores bookmarks on its servers; SheetBookmark has no server at all — bookmarks live in a Google Sheet in your own Drive, one tab per browser, under the AGPL open-source license."}},
+{"@type":"Question","name":"Why not just use Chrome or Firefox built-in sync?","acceptedAnswer":{"@type":"Answer","text":"Built-in sync only syncs a browser with itself — Chrome to Chrome, Firefox to Firefox. SheetBookmark syncs across browser brands (Chrome, Firefox, Edge, Brave, Vivaldi) into one spreadsheet you own, searchable from any of them."}}
+]}
+</script>
+<style>
+:root{
+  --paper:#fdfcf9; --card:#ffffff;
+  --ink:#1a2d4f; --ink-soft:#51617d; --ink-faint:#8492a8;
+  --blue:#1d4ed8; --blue-soft:#eaf0fd;
+  --green:#047857; --green-soft:#e8f5ef;
+  --line:rgba(26,45,79,.09); --line-strong:rgba(26,45,79,.18);
+  --grid:rgba(26,45,79,.05);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);
+  background:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),var(--paper);
+  background-size:32px 32px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.01em}
+nav{position:sticky;top:0;z-index:10;background:rgba(253,252,249,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--ink)}
+.brand svg{width:25px;height:25px;color:var(--green)}
+.nav-links{display:flex;gap:22px;font-size:14.5px;font-weight:550}
+.nav-links a{color:var(--ink-soft)}
+.nav-links a:hover{color:var(--blue);text-decoration:none}
+header{padding:56px 0 8px}
+h1{font-size:clamp(26px,4vw,38px);max-width:24ch}
+.sub{color:var(--ink-soft);max-width:64ch;margin:14px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 16px}
+.chip{font:inherit;font-size:13px;font-weight:600;padding:7px 15px;border-radius:99px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.chip:hover{border-color:var(--blue);color:var(--blue)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tablewrap{background:var(--card);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 14px 36px rgba(26,45,79,.08);overflow-x:auto;margin-bottom:10px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th,td{padding:12px 16px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+tr:last-child th,tr:last-child td{border-bottom:none}
+thead th{font-size:13.5px;border-bottom:2px solid var(--line-strong);white-space:nowrap}
+tbody th{font-weight:600;font-size:13.5px;color:var(--ink);background:var(--paper);position:sticky;left:0;min-width:180px;max-width:220px}
+td{color:var(--ink-soft);min-width:150px}
+.us{background:var(--green-soft)}
+thead .us{color:var(--green);font-weight:700}
+td.us{color:var(--ink)}
+.dead{color:var(--ink-faint);font-style:italic}
+thead .dead{font-style:normal}
+.y{color:var(--green);font-weight:700}
+.n{color:#be123c}
+.m{color:var(--ink-faint)}
+col.hl{background:var(--blue-soft)}
+.note{font-size:13px;color:var(--ink-faint);margin:14px 0 40px;max-width:74ch}
+section{padding:8px 0 48px}
+h2{font-size:clamp(21px,3vw,27px);margin-bottom:10px}
+details{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 20px;margin-bottom:9px}
+summary{cursor:pointer;font-weight:600;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::after{content:"+";color:var(--blue);font-weight:700}
+details[open] summary::after{content:"–"}
+details p{margin-top:10px;font-size:14.5px;color:var(--ink-soft)}
+.cta{display:inline-flex;gap:9px;font-weight:650;font-size:15px;padding:12px 21px;border-radius:9px;background:var(--green);color:#fff;margin:6px 0 40px}
+.cta:hover{text-decoration:none;background:#059669}
+footer{border-top:1px solid var(--line);padding:28px 0 44px;font-size:14px;color:var(--ink-faint);background:var(--card)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap nav-inner">
+  <a class="brand" href="./">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 4h22a2.5 2.5 0 0 1 2.5 2.5V44l-13.5-9L10.5 44V6.5A2.5 2.5 0 0 1 13 4z"/><g fill="#fdfcf9"><rect x="16.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="10" width="6.5" height="6.5" rx="1.2"/><rect x="16.5" y="19" width="6.5" height="6.5" rx="1.2"/><rect x="25.5" y="19" width="6.5" height="6.5" rx="1.2"/></g></svg>
+    SheetBookmark
+  </a>
+  <div class="nav-links"><a href="./">Home</a><a href="./#features">Features</a><a href="PRIVACY.html">Privacy</a><a href="https://github.com/ShuckZ77/sheetbookmark">GitHub</a></div>
+</div></nav>
+
+<header class="wrap">
+  <h1>How does SheetBookmark compare?</h1>
+  <p class="sub">An honest feature matrix against the popular ways people manage bookmarks in 2026. Every cell reflects publicly documented behavior — if you spot an error, <a href="https://github.com/ShuckZ77/sheetbookmark/issues">open an issue</a> and we'll fix it. Accuracy over marketing.</p>
+</header>
+
+<main class="wrap">
+  <div class="chips" role="tablist" aria-label="Choose comparison">
+    <button class="chip on" data-cols="all">All</button>
+    <button class="chip" data-cols="raindrop">vs Raindrop.io</button>
+    <button class="chip" data-cols="pocket">vs Pocket</button>
+    <button class="chip" data-cols="toby">vs Toby</button>
+    <button class="chip" data-cols="sync">vs browser sync</button>
+  </div>
+
+  <div class="tablewrap"><table id="cmp">
+    <thead><tr>
+      <th></th>
+      <th class="us">SheetBookmark</th>
+      <th data-c="raindrop">Raindrop.io</th>
+      <th data-c="pocket" class="dead">Pocket <span class="m">(discontinued 2025)</span></th>
+      <th data-c="toby">Toby</th>
+      <th data-c="sync">Browser built-in sync</th>
+    </tr></thead>
+    <tbody>
+      <tr><th>Where your data lives</th>
+        <td class="us"><span class="y">A Google Sheet in your own Drive</span></td>
+        <td data-c="raindrop">Raindrop's cloud servers</td>
+        <td data-c="pocket" class="dead">Service shut down — data export ended 2025</td>
+        <td data-c="toby">Toby's cloud servers</td>
+        <td data-c="sync">Browser vendor's sync service</td></tr>
+      <tr><th>Works across browser brands<br><span class="m">(Chrome ⇄ Firefox ⇄ Edge)</span></th>
+        <td class="us"><span class="y">✔</span> one sheet, a tab per browser</td>
+        <td data-c="raindrop"><span class="y">✔</span> via its apps &amp; extensions</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby"><span class="y">✔</span> extensions for major browsers</td>
+        <td data-c="sync"><span class="n">✖</span> same brand only</td></tr>
+      <tr><th>Data as an open file<br><span class="m">(sort, filter, formulas, export)</span></th>
+        <td class="us"><span class="y">✔</span> it <i>is</i> a spreadsheet</td>
+        <td data-c="raindrop">export/backup features</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby">limited export</td>
+        <td data-c="sync"><span class="n">✖</span> HTML export only, manual</td></tr>
+      <tr><th>Survives the service shutting down</th>
+        <td class="us"><span class="y">✔</span> no service exists to shut down</td>
+        <td data-c="raindrop">depends on the company</td>
+        <td data-c="pocket" class="dead"><span class="n">✖</span> — it happened</td>
+        <td data-c="toby">depends on the company</td>
+        <td data-c="sync">tied to vendor account</td></tr>
+      <tr><th>New account required</th>
+        <td class="us"><span class="y">None</span> — uses your existing Google sign-in</td>
+        <td data-c="raindrop">yes</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby">yes</td>
+        <td data-c="sync">browser vendor account</td></tr>
+      <tr><th>Price</th>
+        <td class="us"><span class="y">Free, forever</span> — nothing to upsell</td>
+        <td data-c="raindrop">freemium; Pro subscription</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby">freemium; paid teams</td>
+        <td data-c="sync">free</td></tr>
+      <tr><th>Open source</th>
+        <td class="us"><span class="y">✔</span> AGPL-3.0, full source</td>
+        <td data-c="raindrop">service is proprietary</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby"><span class="n">✖</span></td>
+        <td data-c="sync"><span class="m">browser-dependent</span></td></tr>
+      <tr><th>Notes on bookmarks</th>
+        <td class="us"><span class="y">✔</span> pre-filled from your highlight; editable from any browser or the sheet</td>
+        <td data-c="raindrop"><span class="y">✔</span> notes &amp; highlights</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby">limited</td>
+        <td data-c="sync"><span class="n">✖</span></td></tr>
+      <tr><th>Which browser saved what</th>
+        <td class="us"><span class="y">✔</span> separate tab per browser + profile labels</td>
+        <td data-c="raindrop"><span class="n">✖</span> unified list</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby">workspace-based</td>
+        <td data-c="sync"><span class="n">✖</span> merged</td></tr>
+      <tr><th>Automatable<br><span class="m">(formulas, Apps Script, exports)</span></th>
+        <td class="us"><span class="y">✔</span> the whole Sheets ecosystem</td>
+        <td data-c="raindrop">API (paid tiers for some uses)</td>
+        <td data-c="pocket" class="dead">—</td>
+        <td data-c="toby"><span class="n">✖</span></td>
+        <td data-c="sync"><span class="n">✖</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Comparison reflects publicly documented behavior as of July 2026. Products evolve — corrections are welcome and applied fast: <a href="https://github.com/ShuckZ77/sheetbookmark/issues">report an inaccuracy</a>.</p>
+
+  <a class="cta" href="./#get">Get SheetBookmark — free</a>
+
+  <section id="faq">
+    <h2>Common questions</h2>
+    <details><summary>What is a good Pocket alternative now that Pocket shut down?</summary><p>Pocket was discontinued in July 2025, taking saved collections with it. SheetBookmark is a free, open-source alternative for saving pages with notes — and because everything lives in a Google Sheet in <em>your own</em> Drive, no shutdown can ever take your collection away. There is no service to shut down.</p></details>
+    <details><summary>Is SheetBookmark a Raindrop.io alternative?</summary><p>They solve the same problem with opposite philosophies. Raindrop is an excellent polished cloud service — your bookmarks live on its servers, with its apps as the interface. SheetBookmark has no server: bookmarks live in a spreadsheet you own, the interface is any browser plus Google Sheets itself, and the code is AGPL open source. Pick cloud polish, or pick ownership.</p></details>
+    <details><summary>Why not just use Chrome or Firefox built-in sync?</summary><p>Built-in sync only syncs a browser with itself — Chrome to Chrome, Firefox to Firefox. If you live in one browser ecosystem it's great. SheetBookmark exists for everyone else: it syncs bookmarks across Chrome, Firefox, Edge, Brave and Vivaldi into one searchable spreadsheet, with notes, that you keep forever.</p></details>
+    <details><summary>How do I export bookmarks to Google Sheets automatically?</summary><p>That is literally what SheetBookmark does: press Ctrl+D (or click the toolbar button) and the bookmark appears as a row in your sheet within seconds — title, URL, folder, note, timestamp, and which browser saved it. No manual export step exists because there is nothing to export: the sheet is the storage.</p></details>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  SheetBookmark — no server, no tracking, your sheet. · <a href="./">Home</a> · <a href="PRIVACY.html">Privacy</a> · <a href="https://github.com/ShuckZ77/sheetbookmark">GitHub</a>
+</div></footer>
+
+<script>
+(() => {
+  const chips = document.querySelectorAll('.chip');
+  const cells = document.querySelectorAll('[data-c]');
+  chips.forEach((chip) => chip.addEventListener('click', () => {
+    chips.forEach((c) => c.classList.toggle('on', c === chip));
+    const pick = chip.dataset.cols;
+    cells.forEach((cell) => cell.classList.toggle('hidden', pick !== 'all' && cell.dataset.c !== pick));
+  }));
+})();
+</script>
+</body>
+</html>

@@ -123,6 +123,15 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
 .foot a{color:var(--ink-soft)}
 .foot a:hover{color:var(--blue)}
 </style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"SheetBookmark",
+"applicationCategory":"BrowserApplication","operatingSystem":"Chrome, Firefox, Edge (Windows, macOS, Linux)",
+"description":"Sync bookmarks from Chrome, Firefox and Edge into a Google Sheet in your own Drive — a tab per browser, searchable everywhere, no server, no account, no tracking.",
+"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+"url":"https://shuckz77.github.io/sheetbookmark/",
+"softwareHelp":"https://github.com/ShuckZ77/sheetbookmark",
+"license":"https://www.gnu.org/licenses/agpl-3.0.html"}
+</script>
 </head>
 <body>
 
@@ -137,6 +146,7 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
     <a href="#sheet">Your sheet</a>
     <a href="#privacy">Privacy</a>
     <a href="#faq">FAQ</a>
+    <a href="compare.html">Compare</a>
     <a class="gh" href="https://github.com/ShuckZ77/sheetbookmark" title="Source on GitHub" aria-label="GitHub repository">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       <span>GitHub</span>
@@ -234,6 +244,7 @@ footer{border-top:1px solid var(--line);padding:32px 0 46px;font-size:14px;color
   <details><summary>What happens if I delete a row, rename the sheet, or move it?</summary><p>Rename and move anything — sync follows the file's identity, not its name or location. Deleting a row tells the extension that page is no longer saved, so bookmarking it again writes a fresh row.</p></details>
   <details><summary>Can it read my passwords or browsing history?</summary><p>Neither. Browsers expose no password API to extensions, and SheetBookmark requests no history access. It reads a page's content only at the moment you click Save on it — nothing else, ever.</p></details>
   <details><summary>Something broke — how do I report it?</summary><p>Options page → Support → <em>Report a problem</em>. It opens a GitHub issue pre-filled with your version, browser and recent on-device error entries (URLs scrubbed) — you see and can edit everything before submitting. Nothing is ever sent automatically.</p></details>
+  <details><summary>How does it compare to Raindrop, Pocket, or browser sync?</summary><p>See the full honest feature matrix — data ownership, cross-browser support, price, open source — on the <a href="compare.html">comparison page</a>.</p></details>
   <details><summary>Is it really free?</summary><p>Yes — for everyone, forever. It's open source under AGPL-3.0: anyone may build on it, and anyone who redistributes it must share their improvements just as openly. No server costs, nothing to upsell.</p></details>
   </div>
 </div></section>
