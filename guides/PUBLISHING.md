@@ -245,7 +245,9 @@ OAuth app **In production**; fresh artifact via `npm test && npm run zip`.
 4. Register `https://<store-item-id>.chromiumapp.org/` on the OAuth client. Optionally copy the
    store's public key (item → Package → *View public key*) into `.keys/manifest-key.txt` so local
    dev and store share one ID.
-5. Store listing — hard requirements: detailed description, category, language, ≥1 screenshot at
+5. Store listing — hard requirements: detailed description, category (**Workflow & Planning** —
+   the bookmark-manager cluster; its 'related extensions' neighbors are the discovery channel),
+   language, ≥1 screenshot at
    **exactly 1280×800** (ours), and the **mandatory 440×280 small promo tile**. Optional: marquee
    1400×560, YouTube video.
 6. **Privacy practices tab** (Submit stays disabled until complete): single purpose,
