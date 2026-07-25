@@ -23,7 +23,7 @@ Because you own it. Sort, filter, add columns, export, grep — your bookmarks a
 
 ## Get it
 
-- 🏬 Chrome Web Store / Firefox Add-ons / Edge Add-ons — **coming soon**
+- 🏬 **[Chrome Web Store — install now](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh)** (works on Brave & Vivaldi too) · Firefox Add-ons & Edge Add-ons — in review
 - 🔧 From source (2 min): clone → `npm run build` → load `dist/chrome` unpacked (or `dist/firefox` via `about:debugging`) → details in [guides/DEVELOPMENT.md](guides/DEVELOPMENT.md)
 
 ## How do I sync bookmarks between Chrome and Firefox?
