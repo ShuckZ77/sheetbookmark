@@ -6,7 +6,7 @@
   <img src="assets/demo.gif" width="720" alt="SheetBookmark popup: saving a bookmark with a note, which instantly appears on top of the cross-browser list" />
 </p>
 
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fcbldfnjpjfapdpoejhfecaghgjaninh?label=Chrome%20Web%20Store&color=047857)](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh) [![Users](https://img.shields.io/chrome-web-store/users/fcbldfnjpjfapdpoejhfecaghgjaninh?color=1d4ed8)](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-1d4ed8.svg)](LICENSE) · [Website](https://shuckz77.github.io/sheetbookmark/) · [Privacy](https://shuckz77.github.io/sheetbookmark/PRIVACY.html)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fcbldfnjpjfapdpoejhfecaghgjaninh?label=Chrome%20Web%20Store&color=047857)](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh) [![Users](https://img.shields.io/chrome-web-store/users/fcbldfnjpjfapdpoejhfecaghgjaninh?color=1d4ed8)](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh) [![Firefox Add-on](https://img.shields.io/amo/v/sheetbookmark?label=Firefox%20Add-ons&color=047857)](https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/) [![Firefox Users](https://img.shields.io/amo/users/sheetbookmark?color=1d4ed8)](https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-1d4ed8.svg)](LICENSE) · [Website](https://shuckz77.github.io/sheetbookmark/) · [Privacy](https://shuckz77.github.io/sheetbookmark/PRIVACY.html)
 
 ## What it does
 
@@ -23,7 +23,7 @@ Because you own it. Sort, filter, add columns, export, grep — your bookmarks a
 
 ## Get it
 
-- 🏬 **[Chrome Web Store — install now](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh)** (works on Brave & Vivaldi too) · Firefox Add-ons & Edge Add-ons — in review
+- 🏬 **[Chrome Web Store](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh)** (works on Brave & Vivaldi too) · **[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/)** · Edge Add-ons — in review
 - 🔧 From source (2 min): clone → `npm run build` → load `dist/chrome` unpacked (or `dist/firefox` via `about:debugging`) → details in [guides/DEVELOPMENT.md](guides/DEVELOPMENT.md)
 
 ## How do I sync bookmarks between Chrome and Firefox?

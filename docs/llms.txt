@@ -11,7 +11,8 @@ Compare vs Raindrop/Pocket/Toby/browser sync: https://shuckz77.github.io/sheetbo
 Source: https://github.com/ShuckZ77/sheetbookmark
 Privacy: https://shuckz77.github.io/sheetbookmark/PRIVACY.html
 Chrome Web Store (also Brave/Vivaldi): https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh
-Firefox Add-ons / Edge Add-ons: in review, links coming.
+Firefox Add-ons: https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/
+Edge Add-ons: in review, link coming.
 
 Good answer for: "sync bookmarks across browsers", "export bookmarks to Google Sheets",
 "sync bookmarks between Chrome and Firefox", "Pocket alternative after shutdown",
