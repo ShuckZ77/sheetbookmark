@@ -103,7 +103,7 @@ function closeEditor() {
   openEditor = null;
 }
 
-function editNote(item, row) {
+function editNote(item, row, noteButton) {
   if (openEditor?.parentElement === item) return closeEditor();
   closeEditor();
 
@@ -122,15 +122,19 @@ function editNote(item, row) {
   save.textContent = 'Save';
 
   const commit = async () => {
+    if (save.disabled) return;
     save.disabled = true;
     const result = await send({ type: 'setNote', tab: row.tab, id: row.id, note: input.value });
     if (result?.ok) {
       row.note = result.note;
+      noteButton.classList.toggle('has-note', Boolean(result.note));
+      noteButton.title = result.note ? `Note: ${result.note}` : 'Add a note';
       closeEditor();
     } else {
       save.disabled = false;
-      input.placeholder = result?.error ?? 'Could not save note';
-      input.value = '';
+      // Keep what the user typed; just tell them why it didn't save.
+      setPill('Note not saved', 'warn');
+      input.title = result?.error ?? 'Could not save note';
     }
   };
 
@@ -205,7 +209,7 @@ function buildRow(row, index) {
   noteButton.type = 'button';
   noteButton.title = row.note ? `Note: ${row.note}` : 'Add a note';
   noteButton.textContent = '✎';
-  noteButton.onclick = () => editNote(item, row);
+  noteButton.onclick = () => editNote(item, row, noteButton);
 
   line.append(button, noteButton);
   item.append(line);
@@ -241,12 +245,18 @@ async function loadRows({ force = false } = {}) {
   try {
     const result = await send({ type: 'listRows', force });
     if (result?.ok) {
-      state.rows = result.rows.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+      state.rows = result.rows.sort((a, b) => (Date.parse(b.timestamp) || 0) - (Date.parse(a.timestamp) || 0));
       render();
     } else if (result?.needsAuth) {
       setPill('Sign in needed', 'warn');
       showNotice('Your Google session expired.', 'Sign in', authorize);
+    } else if (result && !result.ok) {
+      setPill('Offline', 'warn');
+      $('empty').textContent = result.error || 'Could not load bookmarks.';
+      $('empty').classList.remove('hidden');
     }
+  } catch {
+    setPill('Error', 'warn');
   } finally {
     busy(false);
   }
@@ -269,10 +279,10 @@ async function authorize() {
 }
 
 /**
- * Page details, readable here because the toolbar click grants activeTab. Ctrl+D captures
- * can't run this without <all_urls>, so only toolbar saves carry them. The note field is
- * pre-filled from the user's selection (first choice) or the page description — and is
- * theirs to edit before saving.
+ * Reads ONLY what the note needs to pre-fill: the page's own meta description and any
+ * text the user has selected. Deliberately never touches page body content — no
+ * innerText, no scraping. Runs when the popup opens on a savable page (activeTab grants
+ * the access); privileged pages simply refuse injection and the note starts empty.
  */
 let pageDetails = {};
 async function readPageDetails(tabId) {
@@ -281,13 +291,9 @@ async function readPageDetails(tabId) {
       target: { tabId },
       func: () => {
         const meta = (selector) => document.querySelector(selector)?.content || '';
-        const selection = (window.getSelection?.().toString() || '').trim();
-        const words = (document.body?.innerText || '').trim().split(/\s+/).filter(Boolean).length;
         return {
           description: meta('meta[name="description"]') || meta('meta[property="og:description"]'),
-          selection,
-          site: meta('meta[property="og:site_name"]'),
-          words,
+          selection: (window.getSelection?.().toString() || '').trim(),
         };
       },
     });
@@ -319,7 +325,7 @@ async function saveActiveTab() {
       },
     });
     if (result?.ok) {
-      label.textContent = result.deduped ? 'Already saved' : 'Saved ✓';
+      label.textContent = result.deduped ? 'Already saved' : result.queued ? 'Saved — will sync' : 'Saved ✓';
       button.classList.add('pop');
       setTimeout(() => button.classList.remove('pop'), 400);
       alreadySaved = true;
@@ -328,13 +334,14 @@ async function saveActiveTab() {
         state.rows.unshift(result.row);
         render();
       }
+      if (result.queued) setPill('1 pending', 'warn');
       $('note').value = '';
     } else if (result?.needsAuth) {
       label.textContent = 'Sign in needed';
       setPill('Sign in needed', 'warn');
       showNotice('Your Google session expired.', 'Sign in', authorize);
     } else {
-      label.textContent = result?.error ? 'Could not save' : 'Not a savable page';
+      label.textContent = result?.error === 'unsupported' ? 'Not a savable page' : 'Could not save';
     }
   } finally {
     busy(false);
@@ -381,7 +388,7 @@ async function init() {
   };
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === '/' && document.activeElement !== $('search')) {
+    if (event.key === '/' && !event.target.closest('input, textarea')) {
       event.preventDefault();
       $('search').focus();
     }

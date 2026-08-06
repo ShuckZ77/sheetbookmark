@@ -36,7 +36,7 @@ Because you own it. Sort, filter, add columns, export, grep — your bookmarks a
 
 **Does it work across computers?** Yes — the sheet lives in your Drive; any install on the same Google account joins it.
 
-**Can it read my passwords or history?** No. Browsers expose no password API to extensions, and SheetBookmark requests no history permission. It reads a page only at the moment you save it.
+**Can it read my passwords or history?** No. Browsers expose no password API to extensions, and SheetBookmark requests no history permission. When you open the popup to save a page, it reads only that page's meta description and your selected text to pre-fill a note — never the page's content, never in the background.
 
 **What if I rename the sheet, or delete a row?** Rename/move anything — sync follows the file, not the name. Deleting a row makes that page saveable again.
 

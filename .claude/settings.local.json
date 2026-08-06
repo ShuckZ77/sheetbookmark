@@ -37,7 +37,8 @@
       "Bash(node -e \"const m=require\\('./dist/chrome/manifest.json'\\);console.log\\('zip key:', m.key?'✗':'absent ✓','| name:',m.name,'| v'+m.version\\)\")",
       "Bash(node -e \"const m=require\\('./dist/chrome/manifest.json'\\);console.log\\('dev key:', m.key?'present ✓':'✗'\\)\")",
       "Bash(git check-ignore *)",
-      "Bash(python3 -c \"import PIL; print\\('PIL yes'\\)\")"
+      "Bash(python3 -c \"import PIL; print\\('PIL yes'\\)\")",
+      "Bash(node --check src/lib/auth.js)"
     ]
   }
 }

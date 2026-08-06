@@ -16,7 +16,7 @@ kind. Your bookmarks travel directly from your browser to your own Google accoun
 | --- | --- | --- |
 | Bookmark page titles, URLs, folder names — and, when you save via the toolbar button, the page's public meta description | This is the thing being synced | A spreadsheet **the extension creates in your own Google Drive** |
 | The browser name, OS, and the profile label you type | Written into each row so you can tell which browser saved what | The same spreadsheet |
-| The note you write (pre-filled from your text selection or the page's meta description on toolbar saves; editable per-row afterwards) | Saved into that bookmark's row | The same spreadsheet |
+| The note you write, pre-filled from your text selection or the page's meta description (read only when you open the popup on that page; the page's content is never read) | Saved into that bookmark's row | The same spreadsheet |
 | A Google OAuth access token | To authorize writing to that one spreadsheet | Held in your browser's **session memory only**. Never written to disk, never transmitted anywhere except to Google |
 | Your settings, an upload queue, and a list of already-synced URLs | To work offline and avoid duplicate rows | Stored **locally in your browser** (`storage.local`). Never transmitted |
 
@@ -24,7 +24,7 @@ kind. Your bookmarks travel directly from your browser to your own Google accoun
 
 - It does **not** send any data to the developer, or to any third-party server.
 - It does **not** collect analytics, telemetry, or tracking of any kind.
-- It does **not** read your browsing history, or the content of pages you visit.
+- It does **not** read your browsing history. It reads a page's meta description and your selected text only when you open the popup on that page to save it — never the page's content, and never in the background.
 - It does **not** sell, rent, or transfer your data to anyone.
 - It does **not** modify or delete your existing browser bookmarks. It reads them, and the
   only time it ever creates any is when you click "Get bookmarks from other browsers" —
@@ -59,5 +59,4 @@ purpose, and is prominent in its user interface.
 
 ## Contact
 
-<!-- Replace with a real contact address before publishing. -->
 Questions: `iitbhu.rishish7@gmail.com`

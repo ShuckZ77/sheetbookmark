@@ -26,9 +26,12 @@ function makeArea() {
   const data = new Map();
   return {
     async get(keys) {
-      if (keys == null) return Object.fromEntries(data);
+      // Real chrome.storage returns a fresh deserialized copy each call — never a shared
+      // reference. Cloning here keeps the mock honest (a caller can't mutate stored state).
+      const clone = (v) => structuredClone(v);
+      if (keys == null) return Object.fromEntries([...data].map(([k, v]) => [k, clone(v)]));
       const wanted = Array.isArray(keys) ? keys : [keys];
-      return Object.fromEntries(wanted.filter((key) => data.has(key)).map((key) => [key, data.get(key)]));
+      return Object.fromEntries(wanted.filter((key) => data.has(key)).map((key) => [key, clone(data.get(key))]));
     },
     async set(patch) {
       for (const [key, value] of Object.entries(patch)) data.set(key, structuredClone(value));
@@ -76,7 +79,8 @@ const chrome = {
     getRedirectURL: () => 'https://ext.chromiumapp.org/',
     launchWebAuthFlow: async ({ url }) => {
       const state = new URL(url).searchParams.get('state');
-      return `https://ext.chromiumapp.org/#access_token=fresh&expires_in=3600&state=${state}`;
+      const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file');
+      return `https://ext.chromiumapp.org/#access_token=fresh&expires_in=3600&scope=${scope}&state=${state}`;
     },
   },
 };
@@ -101,6 +105,8 @@ let driveFiles = [];
 let sheetTabs = [{ sheetId: 7, title: 'Test' }];
 let tabValues = {}; // tab title → array of row value-arrays
 let oldHeader = null; // set to simulate a tab created by an older schema
+let errorBody = null; // custom error payload for >=400 replies
+let throwNetwork = 0; // first N fetches reject like offline
 
 function installFetch() {
   appended = [];
@@ -110,10 +116,13 @@ function installFetch() {
   sheetTabs = [{ sheetId: 7, title: 'Test' }];
   tabValues = {};
   oldHeader = null;
+  errorBody = null;
+  throwNetwork = 0;
   createdBookmarks = [];
   bookmarkSearchResults = [];
 
   globalThis.fetch = async (url, init = {}) => {
+    if (throwNetwork > 0) { throwNetwork -= 1; throw new TypeError('Failed to fetch'); }
     const method = init.method ?? 'GET';
     const status = nextStatus(url, requests.length);
     requests.push({ url, method, auth: init.headers?.Authorization, body: init.body ? JSON.parse(init.body) : undefined });
@@ -121,7 +130,7 @@ function installFetch() {
     await new Promise((resolve) => setTimeout(resolve, 8)); // let callers interleave
 
     const reply = (body) => ({ ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) });
-    if (status >= 400) return reply({ error: { message: 'nope' } });
+    if (status >= 400) return reply(errorBody ?? { error: { message: 'nope' } });
 
     const bare = url.split('?')[0];
 
@@ -149,7 +158,10 @@ function installFetch() {
     }
     if (url.includes('A1%3AJ1')) return reply({ values: [oldHeader ?? HEADER] });
     if (url.includes(':append')) {
-      appended.push(...JSON.parse(init.body).values);
+      const vals = JSON.parse(init.body).values;
+      appended.push(...vals);
+      const title = decodeURIComponent(url).match(/values\/'(.+)'!A:/)?.[1];
+      if (title) tabValues[title] = [...(tabValues[title] ?? []), ...vals];
       return reply({});
     }
     if (url.includes('A2%3AJ')) {
@@ -187,6 +199,8 @@ beforeEach(async () => {
 const urlsOf = () => appended.map((row) => row[COLUMN.url]);
 const idsOf = () => appended.map((row) => row[COLUMN.id]);
 const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
+const fromValues = (vals) => Object.fromEntries(HEADER_ORDER.map((k, i) => [k, vals[i] ?? '']));
+const store_setCache = async (rows) => chrome.storage.local.set({ rowCache: { rows, at: Date.now() } });
 
 // --- Capture and flush ------------------------------------------------------
 
@@ -448,6 +462,40 @@ test('setSync reconfigures the alarm', async () => {
   assert.equal(bad.ok, false);
 });
 
+test('setSync back to instant is accepted and clears the standing alarm (C1 regression)', async () => {
+  await send({ type: 'setSync', syncMode: '60' });
+  assert.equal(alarms.sync.periodInMinutes, 60);
+
+  const result = await send({ type: 'setSync', syncMode: 'instant' });
+  assert.equal(result.ok, true, 'instant must not be rejected as an unknown mode');
+
+  await chrome.storage.local.set({ queue: [] });
+  await send({ type: 'setSync', syncMode: 'instant' });
+  assert.equal(alarms.sync, undefined, 'no standing interval alarm remains in instant mode');
+});
+
+test('a failed second chunk does not re-append the first on retry (F2 regression)', async () => {
+  const rows = Array.from({ length: 600 }, (_, i) => queuedRow(`b${i}`));
+  await chrome.storage.local.set({ queue: rows, syncMode: 'manual' });
+
+  // First append (chunk 1, 500 rows) lands; second (chunk 2) fails once.
+  let appendCalls = 0;
+  nextStatus = (url) => {
+    if (url.includes(':append')) { appendCalls += 1; return appendCalls === 2 ? 500 : 200; }
+    return 200;
+  };
+  const first = await send({ type: 'syncNow' });
+  assert.equal(first.ok, false, 'the batch reports failure when a chunk fails');
+
+  // Retry: only the never-written rows remain queued.
+  nextStatus = () => 200;
+  await send({ type: 'syncNow' });
+
+  const ids = appended.map((r) => r[COLUMN.id]);
+  assert.equal(new Set(ids).size, ids.length, 'no row was appended twice across the failure+retry');
+  assert.equal(new Set(ids).size, 600, 'every row landed exactly once');
+});
+
 test('the note is written through and the saved row comes back for optimistic display', async () => {
   const result = await send({
     type: 'saveTab',
@@ -458,6 +506,29 @@ test('the note is written through and the saved row comes back for optimistic di
   assert.equal(row[COLUMN.note], 'my note');
   assert.equal(result.row.note, 'my note', 'row returned to the popup');
   assert.equal(result.row.tab, 'Test', 'tagged with its sheet tab');
+});
+
+test('a note edited mid-flush is re-applied to the sheet, not lost (F3 regression)', async () => {
+  // One row waiting; make its append pause so we can edit the note during the flush.
+  await chrome.storage.local.set({ queue: [queuedRow('race')], syncMode: 'manual' });
+  let resolveAppend;
+  const gate = new Promise((r) => (resolveAppend = r));
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (url.includes(':append')) { await gate; }
+    return realFetch(url, init);
+  };
+
+  const flushing = send({ type: 'syncNow' });
+  await settle(15);
+  // While the append is gated, the user edits the queued row's note.
+  await send({ type: 'setNote', tab: 'Test', id: 'id-race', note: 'edited during flush' });
+  resolveAppend();
+  await flushing;
+  globalThis.fetch = realFetch;
+
+  const put = requests.find((r) => r.method === 'PUT' && r.body?.values?.[0]?.[0] === 'edited during flush');
+  assert.ok(put, 'the edited note is written to its cell after the append');
 });
 
 test('setNote finds the row by id and rewrites exactly one cell', async () => {
@@ -548,6 +619,27 @@ test('importFromSheet copies only foreign, missing, safe bookmarks into a folder
   assert.equal(appended.length, 0);
 });
 
+test('an imported bookmark’s onCreated echo is suppressed, not re-queued (F1 regression)', async () => {
+  sheetTabs = [
+    { sheetId: 7, title: 'Test' },
+    { sheetId: 8, title: 'Firefox — Laptop' },
+  ];
+  tabValues = {
+    'Firefox — Laptop': [rowValues({ timestamp: 't', id: 'f1', title: 'Fresh', url: 'https://fresh.example/' })],
+  };
+
+  const imported = await send({ type: 'importFromSheet' });
+  assert.equal(imported.imported, 1);
+
+  // The folder + bookmark creation fire onCreated for the imported URL.
+  await listeners.created('x', { title: 'Fresh', url: 'https://fresh.example/', parentId: 'bm1' });
+  await settle(30);
+
+  const { queue } = await chrome.storage.local.get('queue');
+  assert.equal((queue ?? []).length, 0, 'the echo must NOT enter this install’s upload queue');
+  assert.equal(appended.length, 0, 'and must never be appended to the own tab');
+});
+
 test('importFromSheet reuses an existing Bookmark Sync folder', async () => {
   bookmarkSearchResults = [{ id: 'existing-folder', title: 'SheetBookmark' }];
   sheetTabs = [
@@ -564,6 +656,24 @@ test('importFromSheet reuses an existing Bookmark Sync folder', async () => {
 });
 
 // --- Status, auth, disconnect ----------------------------------------------
+
+test('a toolbar save never leaves a one-row collapsed cache (F7 regression)', async () => {
+  // Popup had loaded the full list; the cache holds it.
+  await store_setCache([
+    fromValues(rowValues({ timestamp: 't', id: 'old1', title: 'Old one', url: 'https://old1.example/' })),
+    fromValues(rowValues({ timestamp: 't', id: 'old2', title: 'Old two', url: 'https://old2.example/' })),
+  ]);
+
+  await send({ type: 'saveTab', tab: { title: 'New', url: 'https://new.example/' } });
+
+  // The flush wipes the cache; the reseed must NOT rebuild it as just the new row.
+  const { rowCache } = await chrome.storage.local.get('rowCache');
+  const cached = rowCache?.rows ?? [];
+  assert.ok(
+    !(cached.length === 1 && cached[0].url === 'https://new.example/'),
+    'the cached list must not collapse to only the just-saved bookmark',
+  );
+});
 
 test('status reports the sync mode, tab and queue', async () => {
   await chrome.storage.local.set({ syncMode: '60', lastSyncAt: 123 });
@@ -586,6 +696,89 @@ test('a 401 invalidates the token, re-authorizes, and retries the write', async 
   assert.equal(requests[0].auth, 'Bearer good', 'first attempt uses the cached token');
   assert.equal(requests[1].auth, 'Bearer fresh', 'retry uses a token minted by launchWebAuthFlow');
   assert.equal(appended.length, 1);
+});
+
+test('deleting the whole sheet in Drive drops the connection but keeps the bookmark queued', async () => {
+  nextStatus = (url, index) => (index <= 1 ? 404 : 200); // listTabs 404, then sheetExists 404
+
+  const result = await send({ type: 'saveTab', tab: { title: 'A', url: 'https://alpha.example/' } });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.queued, true, 'the save is honest: kept, will sync after reconnect');
+  const { sheetId, queue } = await chrome.storage.local.get(['sheetId', 'queue']);
+  assert.equal(sheetId, '', 'dead connection cleared so the UI offers Connect again');
+  assert.equal(queue.length, 1, 'nothing lost');
+});
+
+test('an offline toolbar save reports Saved-will-sync, never failure', async () => {
+  throwNetwork = 5;
+
+  const result = await send({ type: 'saveTab', tab: { title: 'A', url: 'https://alpha.example/' } });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.queued, true);
+  assert.equal(result.row.url, 'https://alpha.example/', 'row returned for optimistic display');
+  const { queue } = await chrome.storage.local.get('queue');
+  assert.equal(queue.length, 1);
+});
+
+test('editing the note of a row still in the upload queue edits the queue, no network', async () => {
+  await chrome.storage.local.set({ queue: [queuedRow('pending')] });
+
+  const result = await send({ type: 'setNote', tab: 'Test', id: 'id-pending', note: '  fresh note  ' });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.note, 'fresh note');
+  const { queue } = await chrome.storage.local.get('queue');
+  assert.equal(queue[0].note, 'fresh note', 'queued row carries the note into its eventual flush');
+  assert.equal(requests.length, 0, 'no API call was needed');
+});
+
+test('a 429 surfaces as a friendly queued-and-retrying message', async () => {
+  nextStatus = () => 429;
+  errorBody = { error: { message: 'Rate limit exceeded' } };
+
+  const result = await send({ type: 'listRows', force: true });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /rate limit.*sync automatically/i);
+});
+
+test('a consent where the checkbox was skipped is rejected with usable guidance', async () => {
+  await chrome.storage.session.clear();
+  const original = chrome.identity.launchWebAuthFlow;
+  // Google "succeeds" but grants no scope — exactly what happens when the user
+  // presses Continue without ticking the checkbox.
+  chrome.identity.launchWebAuthFlow = async ({ url }) => {
+    const state = new URL(url).searchParams.get('state');
+    return `https://ext.chromiumapp.org/#access_token=scopeless&expires_in=3600&state=${state}`;
+  };
+
+  try {
+    const result = await send({ type: 'authorize' });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /tick the checkbox/i, 'tells the user exactly what to do');
+
+    const { accessToken } = await chrome.storage.session.get('accessToken');
+    assert.equal(accessToken, undefined, 'a scopeless token is never cached');
+  } finally {
+    chrome.identity.launchWebAuthFlow = original;
+  }
+});
+
+test('a 403 insufficient-scope response invalidates the token and asks to sign in again', async () => {
+  errorBody = { error: { message: 'Request had insufficient authentication scopes.', status: 'PERMISSION_DENIED' } };
+  nextStatus = (url, index) => (index === 0 ? 403 : 200);
+
+  const result = await send({ type: 'saveTab', tab: { title: 'A', url: 'https://alpha.example/' } });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.needsAuth, true, 'surfaces as a sign-in prompt, not a dead-end error');
+  assert.match(result.error, /sign in again/i);
+  const { accessToken } = await chrome.storage.session.get('accessToken');
+  assert.equal(accessToken, undefined, 'stale-scope token dropped');
+  const { queue } = await chrome.storage.local.get('queue');
+  assert.equal(queue.length, 1, 'the bookmark survives for after re-auth');
 });
 
 test('when sign-in fails the row stays queued and the badge is raised', async () => {

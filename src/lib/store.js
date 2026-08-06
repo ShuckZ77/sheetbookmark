@@ -24,12 +24,14 @@ const DEFAULTS = {
 };
 
 const SEEN_KEY = 'seenUrls';
-const SEEN_CAP = 20_000;
+const SEEN_CAP = 100_000; // ~a few MB of URL strings; past any realistic bookmark count (F12)
 const QUEUE_KEY = 'queue';
 const CACHE_KEY = 'rowCache';
 
 const TRACKING_PREFIX = /^(utm_|mc_|_hs)/i;
-const TRACKING_EXACT = new Set(['fbclid', 'gclid', 'gbraid', 'wbraid', 'msclkid', 'igshid', 'mkt_tok', 'si', 'spm']);
+// 'si'/'spm' removed: they are meaningful content params on some sites, and stripping
+// them globally would dedupe two DIFFERENT pages together and wrongly refuse a save (F13).
+const TRACKING_EXACT = new Set(['fbclid', 'gclid', 'gbraid', 'wbraid', 'msclkid', 'igshid', 'mkt_tok']);
 
 /**
  * Produces a comparison key, not something to store or navigate to. It drops the
@@ -121,8 +123,37 @@ export async function getCache() {
   return cache;
 }
 
+const CACHE_CAP = 5000;
+
 export async function setCache(rows) {
-  await api.storage.local.set({ [CACHE_KEY]: { rows, at: Date.now() } });
+  // Bounded: a collaborator bloating a shared tab must not blow storage.local or the
+  // worker's memory. Newest rows are the ones the popup shows first.
+  const capped = rows.length > CACHE_CAP ? rows.slice(-CACHE_CAP) : rows;
+  await api.storage.local.set({ [CACHE_KEY]: { rows: capped, at: Date.now() } });
+}
+
+const ECHO_KEY = 'echoSuppress';
+const ECHO_TTL_MS = 60_000;
+
+/** Marks URLs whose imminent onCreated echo should be ignored (import-from-sheet). */
+export async function suppressEcho(keys) {
+  const until = Date.now() + ECHO_TTL_MS;
+  const { [ECHO_KEY]: map = {} } = await api.storage.local.get(ECHO_KEY);
+  for (const key of keys) map[key] = until;
+  await api.storage.local.set({ [ECHO_KEY]: map });
+}
+
+/** True (and consumes the entry) if this URL was a just-imported bookmark's echo. */
+export async function consumeEcho(key) {
+  const { [ECHO_KEY]: map = {} } = await api.storage.local.get(ECHO_KEY);
+  const now = Date.now();
+  const hit = map[key] && map[key] > now;
+  let changed = hit;
+  for (const [k, exp] of Object.entries(map)) {
+    if (k === key || exp <= now) { delete map[k]; changed = true; }
+  }
+  if (changed) await api.storage.local.set({ [ECHO_KEY]: map });
+  return Boolean(hit);
 }
 
 export async function resetAll() {
@@ -141,7 +172,10 @@ export async function logError(context, error) {
   const raw = String(error?.message ?? error ?? 'unknown');
   const message = raw
     .replace(/https?:\/\/\S+/g, '‹url›')
-    .replace(/ya29\.[\w.-]+/g, '‹token›')
+    .replace(/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/gi, '‹email›')
+    .replace(/\bya29\.[\w.-]+/g, '‹token›')
+    .replace(/\bBearer\s+\S+/gi, 'Bearer ‹token›')
+    .replace(/[`\r\n]+/g, ' ') // no markdown-fence or newline breakout into a copied issue
     .slice(0, 300);
   const { [LOG_KEY]: list = [] } = await api.storage.local.get(LOG_KEY);
   list.push({ at: toISTStamp(), context, message });

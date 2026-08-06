@@ -81,12 +81,39 @@ async function setNeedsAuth(needsAuth) {
   await updateBadge();
 }
 
-/** Runs a Sheets call, refreshing the token once if the API rejects it as stale. */
+/**
+ * Runs a Sheets call, refreshing the token once if the API rejects it as stale (401).
+ * A 403 for missing/revoked scope (e.g. the consent checkbox was skipped, or access was
+ * revoked at myaccount.google.com) invalidates the token and surfaces as a sign-in-again
+ * prompt instead of a dead-end error.
+ */
 async function callSheets(operation, { interactive = false } = {}) {
   const token = await getToken({ interactive });
   try {
     return await operation(token);
   } catch (error) {
+    if (error instanceof SheetsError && error.status === 403 && /insufficient|PERMISSION_DENIED/i.test(error.message)) {
+      await invalidateToken();
+      throw new AuthError(
+        'Google access is missing or was revoked. Sign in again and tick the checkbox allowing ' +
+          'SheetBookmark to manage its spreadsheet.',
+        { needsInteraction: true },
+      );
+    }
+    if (error instanceof SheetsError && error.status === 404) {
+      // A 404 on our own sheet usually means the user deleted it in Drive. Confirm,
+      // then drop the connection (queue survives) instead of failing forever.
+      const { sheetId } = await store.getSettings();
+      if (sheetId && !(await sheetExists(token, sheetId).catch(() => true))) {
+        await store.setSettings({ sheetId: '', tabId: null, importDone: false });
+        await updateBadge();
+        throw new SheetsError(
+          'Your bookmark sheet is no longer reachable — it may have been deleted in Drive. ' +
+            'Open settings and press Connect; pending bookmarks are kept and will sync after.',
+          404,
+        );
+      }
+    }
     if (!(error instanceof SheetsError) || error.status !== 401) throw error;
     await invalidateToken();
     return operation(await getToken({ interactive }));
@@ -131,21 +158,35 @@ function scheduleFlush() {
   }, FLUSH_DEBOUNCE_MS);
 }
 
+let ownUrlsCache = null; // { at, set } — short-lived so a bookmark storm shares one read
+const OWN_URLS_TTL_MS = 5000;
+
+/** The install's own-tab URL set, memoized briefly. Invalidated whenever a flush writes. */
+async function ownTabUrlSet() {
+  if (ownUrlsCache && Date.now() - ownUrlsCache.at < OWN_URLS_TTL_MS) return ownUrlsCache.set;
+  const { sheetId } = await store.getSettings();
+  const set = await callSheets(async (token) => {
+    const title = await ensureOwnTabLive(token);
+    const rows = await readTabRows(token, sheetId, title);
+    return new Set(rows.filter((row) => row.url).map((row) => store.normalizeUrl(row.url)));
+  });
+  ownUrlsCache = { at: Date.now(), set };
+  return set;
+}
+
 /**
  * The seen-set is a CACHE of the sheet, not a truth of its own. When a candidate is
  * about to be refused as already-saved, this re-checks the install's own tab: a row the
  * user deleted from the sheet un-learns its URL, and the save proceeds. Offline or
  * signed out, it silently trusts the cache — worst case is a refusal, never a duplicate.
+ * The own-tab read is memoized (F5) so a storm of already-seen onCreated events cannot
+ * hold the lock through hundreds of sequential network reads.
  */
 async function unlearnDeletedRows(seen, hits) {
   const { sheetId } = await store.getSettings();
   if (!sheetId) return;
   try {
-    const ownUrls = await callSheets(async (token) => {
-      const title = await ensureOwnTabLive(token);
-      const rows = await readTabRows(token, sheetId, title);
-      return new Set(rows.filter((row) => row.url).map((row) => store.normalizeUrl(row.url)));
-    });
+    const ownUrls = await ownTabUrlSet();
     const queued = new Set((await store.getQueue()).map((row) => store.normalizeUrl(row.url)));
     for (const candidate of hits) {
       const key = store.normalizeUrl(candidate.url);
@@ -193,7 +234,7 @@ let flushing = false;
 async function flush({ interactive = false } = {}) {
   // Claimed before the first await: otherwise the debounce timer, the alarm and a
   // Save click could each read the same queue and append every row three times.
-  if (flushing) return { ok: true, skipped: true };
+  if (flushing) return { ok: true, skipped: true, queued: true };
   flushing = true;
 
   try {
@@ -203,17 +244,34 @@ async function flush({ interactive = false } = {}) {
     const { sheetId } = await store.getSettings();
     if (!sheetId) return { ok: false, error: 'Not connected' };
 
+    // Append in chunks, removing each chunk from the queue AS IT LANDS. If a later
+    // chunk fails, the retry re-appends only the rows that never made it — no dup (F2).
     await callSheets(async (token) => {
       const title = await ensureOwnTabLive(token);
-      await appendRows(token, sheetId, title, pending);
-    }, { interactive });
+      for (let i = 0; i < pending.length; i += 500) {
+        const chunk = pending.slice(i, i + 500);
+        await appendRows(token, sheetId, title, chunk);
 
-    // Anything enqueued while the network call was in flight must survive.
-    const written = new Set(pending.map((row) => row.id));
-    await withLock(async () => {
-      const queue = await store.getQueue();
-      await store.setQueue(queue.filter((row) => !written.has(row.id)));
-    });
+        // If a note was edited AFTER we snapshotted this chunk but before we drop it
+        // from the queue, we just wrote the stale note — correct that one cell (F3).
+        const wroteNote = new Map(chunk.map((row) => [row.id, row.note ?? '']));
+        const reEdited = [];
+        await withLock(async () => {
+          const queue = await store.getQueue();
+          for (const row of queue) {
+            if (wroteNote.has(row.id) && (row.note ?? '') !== wroteNote.get(row.id)) {
+              reEdited.push({ id: row.id, note: row.note ?? '' });
+            }
+          }
+          await store.setQueue(queue.filter((row) => !wroteNote.has(row.id)));
+        });
+        for (const edit of reEdited) {
+          const rowNumber = await findRowById(token, sheetId, title, edit.id);
+          if (rowNumber) await updateNoteCell(token, sheetId, title, rowNumber, edit.note);
+        }
+      }
+      ownUrlsCache = null; // own tab changed — drop the memo (F5)
+    }, { interactive });
 
     await store.setSettings({ lastSyncAt: Date.now() });
     await store.setCache([]);
@@ -249,7 +307,8 @@ async function updateRetryAlarm() {
   const { syncMode } = await store.getSettings();
   if (syncMode in ALARM_MINUTES) return; // interval modes own the alarm
   const queue = await store.getQueue();
-  if (queue.length && syncMode === 'instant') {
+  const { sheetId } = await store.getSettings();
+  if (queue.length && sheetId && syncMode === 'instant') {
     api.alarms.create(SYNC_ALARM, { periodInMinutes: 1 });
   } else {
     await api.alarms.clear(SYNC_ALARM);
@@ -290,15 +349,29 @@ async function handleSaveTab({ tab }) {
   ], { verify: true });
   if (!added) return { ok: true, deduped: true };
 
-  const result = await flush();
-  if (!result.ok) return result;
+  let result;
+  try {
+    result = await flush();
+  } catch (error) {
+    await store.logError('save-flush', error);
+    result = { ok: false, error: error.message };
+  }
+  if (result.needsAuth) return result;
+  if (!result.ok) {
+    // The bookmark is safely queued and the retry alarm is armed — the save did NOT
+    // fail, only the upload is deferred. Tell the user the truth.
+    const { tabName } = await store.getSettings();
+    return { ok: true, queued: true, row: { ...rows[0], tab: tabName } };
+  }
 
   // Hand the row back (tagged like cached rows) so the popup can show it on top
   // instantly, and keep the cache consistent without a network re-read.
   const { tabName } = await store.getSettings();
   const row = { ...rows[0], tab: tabName };
   const cache = await store.getCache();
-  if (cache?.rows) await store.setCache([row, ...cache.rows]);
+  // Only prepend if the cache still holds the real list; a flush wipes it to [],
+  // and reseeding [row] would make the popup show ONLY this bookmark for 60s (F7).
+  if (cache?.rows?.length) await store.setCache([row, ...cache.rows]);
   return { ...result, row };
 }
 
@@ -408,7 +481,12 @@ async function handleConnect({ choice } = {}) {
   });
 
   await setNeedsAuth(false);
-  const imported = await importExistingBookmarks();
+  let imported = 0;
+  try {
+    imported = await importExistingBookmarks();
+  } catch (error) {
+    await store.logError('connect-import', error); // connected fine; the import just queued
+  }
   await configureAlarm();
   return { ok: true, sheetId: result.sheetId, tabName: result.ownTitle, imported };
 }
@@ -423,7 +501,9 @@ async function handleSyncNow() {
 }
 
 async function handleSetSync({ syncMode }) {
-  if (!(syncMode in ALARM_MINUTES) && syncMode !== 'manual') return { ok: false, error: 'Unknown sync mode' };
+  if (syncMode !== 'instant' && syncMode !== 'manual' && !(syncMode in ALARM_MINUTES)) {
+    return { ok: false, error: 'Unknown sync mode' };
+  }
   await store.setSettings({ syncMode });
   await configureAlarm();
   await updateBadge();
@@ -468,6 +548,9 @@ async function handleImportFromSheet() {
     for (const key of picked) seen.add(key);
     await store.saveSeen(seen);
   });
+  // The bookmarks we're about to create will each fire onCreated; suppress those
+  // echoes so they aren't re-appended into THIS install's tab (F1).
+  await store.suppressEcho([...picked]);
 
   const parentId = await ensureImportFolder();
   for (const row of fresh) {
@@ -484,15 +567,43 @@ async function handleImportFromSheet() {
  */
 async function handleSetNote({ tab, id, note }) {
   const { sheetId } = await store.getSettings();
-  if (!sheetId || !tab || !id) return { ok: false, error: 'Not connected' };
+  if (!sheetId) return { ok: false, error: 'Not connected' };
+  if (!id) return { ok: false, error: 'This row was added by hand — edit its note directly in the sheet.' };
 
   const trimmed = String(note ?? '').trim().slice(0, 500);
-  const done = await callSheets(async (token) => {
-    const rowNumber = await findRowById(token, sheetId, tab, id);
-    if (!rowNumber) return false;
-    await updateNoteCell(token, sheetId, tab, rowNumber, trimmed);
+
+  // The row may still be waiting in the upload queue (offline, batch cadence) —
+  // edit it there and it flushes with the new note.
+  const queued = await withLock(async () => {
+    const queue = await store.getQueue();
+    const index = queue.findIndex((row) => row.id === id);
+    if (index === -1) return false;
+    queue[index].note = trimmed;
+    await store.setQueue(queue);
     return true;
-  }, { interactive: true });
+  });
+  if (queued) {
+    const cache = await store.getCache();
+    if (cache?.rows) {
+      await store.setCache(cache.rows.map((row) => (row.id === id ? { ...row, note: trimmed } : row)));
+    }
+    return { ok: true, note: trimmed };
+  }
+
+  let done;
+  try {
+    done = await callSheets(async (token) => {
+      const rowNumber = await findRowById(token, sheetId, tab, id);
+      if (!rowNumber) return false;
+      await updateNoteCell(token, sheetId, tab, rowNumber, trimmed);
+      return true;
+    }, { interactive: true });
+  } catch (error) {
+    if (error instanceof SheetsError && error.status === 400 && /parse range|Unable to parse/i.test(error.message)) {
+      return { ok: false, error: 'That tab was renamed in the sheet — refresh the list and try again.' };
+    }
+    throw error;
+  }
 
   if (!done) return { ok: false, error: 'That row no longer exists in the sheet.' };
 
@@ -537,7 +648,13 @@ async function toErrorResponse(error) {
   }
   console.error('[sheetbookmark]', error);
   await store.logError('handler', error);
-  return { ok: false, error: error.message };
+  let message = error.message;
+  if (error instanceof SheetsError && error.status === 429) {
+    message = 'Google’s rate limit was reached — everything is queued and will sync automatically.';
+  } else if (/fetch|network/i.test(String(error?.message))) {
+    message = 'You appear to be offline — changes are queued and will sync automatically.';
+  }
+  return { ok: false, error: message };
 }
 
 api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -553,6 +670,8 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 api.bookmarks.onCreated.addListener(async (_id, node) => {
   const { captureNative, syncMode } = await store.getSettings();
   if (!captureNative || !isSyncable(node?.url)) return;
+  // A bookmark we just created during "import from other browsers" — don't echo it back.
+  if (await store.consumeEcho(store.normalizeUrl(node.url))) return;
 
   const { added } = await record([
     {

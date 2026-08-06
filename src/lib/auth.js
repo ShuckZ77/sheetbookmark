@@ -90,6 +90,18 @@ async function launchFlow(interactive) {
   const token = params.get('access_token');
   if (!token) throw new AuthError('Google returned no access token', { needsInteraction: !interactive });
 
+  // Google's consent screen presents the scope as a CHECKBOX the user can skip; the
+  // redirect reports what was actually granted. A token without our scope would pass
+  // sign-in and then 403 on the first API call — reject it here with usable guidance.
+  const granted = (params.get('scope') ?? '').split(' ');
+  if (!granted.includes(SCOPES[0])) {
+    throw new AuthError(
+      'Google access was not granted. On the Google sign-in screen, tick the checkbox that lets ' +
+        'SheetBookmark manage its own spreadsheet, then press Continue.',
+      { needsInteraction: true },
+    );
+  }
+
   const lifetimeSeconds = Number(params.get('expires_in')) || 3600;
   await sessionStore.set({ [TOKEN_KEY]: { token, expiresAt: Date.now() + lifetimeSeconds * 1000 } });
   return token;
@@ -100,7 +112,9 @@ async function launchFlow(interactive) {
  * session when it can. Only escalates to a visible window when `interactive` is set;
  * otherwise it raises an AuthError the caller surfaces as a "sign in" prompt.
  */
-export async function getToken({ interactive = false } = {}) {
+let inFlight = null;
+
+async function acquireToken(interactive) {
   const cached = await readCachedToken();
   if (cached) return cached;
 
@@ -113,6 +127,27 @@ export async function getToken({ interactive = false } = {}) {
   } catch {
     if (!interactive) throw new AuthError('Google sign-in required', { needsInteraction: true });
   }
-
   return launchFlow(true);
+}
+
+/**
+ * Single-flight: the retry alarm and a popup action can both need a token at once. Two
+ * concurrent launchWebAuthFlow calls open two consent windows and one errors — so share
+ * one in-flight promise. Interactive callers still get to escalate if the shared silent
+ * attempt failed.
+ */
+export async function getToken({ interactive = false } = {}) {
+  if (inFlight) {
+    try {
+      return await inFlight;
+    } catch {
+      if (!interactive) throw new AuthError('Google sign-in required', { needsInteraction: true });
+    }
+  }
+  inFlight = acquireToken(interactive);
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
 }

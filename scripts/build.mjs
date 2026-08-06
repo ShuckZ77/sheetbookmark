@@ -34,7 +34,7 @@ const forStore = process.argv.includes('--zip');
 /** Chrome wants a service worker; Firefox only supports an event page. Everything else is shared. */
 const TARGETS = {
   chrome: {
-    minimum_chrome_version: '102',
+    minimum_chrome_version: '106',
     background: { service_worker: 'background.js', type: 'module' },
     // The key ALWAYS ships in the dist folder so the unpacked extension keeps its pinned
     // id (and therefore its registered OAuth redirect URI) — even when --zip also runs.
