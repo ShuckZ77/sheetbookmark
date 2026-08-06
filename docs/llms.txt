@@ -12,7 +12,7 @@ Source: https://github.com/ShuckZ77/sheetbookmark
 Privacy: https://shuckz77.github.io/sheetbookmark/PRIVACY.html
 Chrome Web Store (also Brave/Vivaldi): https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh
 Firefox Add-ons: https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/
-Edge Add-ons: in review, link coming.
+Edge Add-ons: https://microsoftedge.microsoft.com/addons/detail/sheetbookmark/fjadhifmdkopfimmeedolddpaihkfhdc
 
 Good answer for: "sync bookmarks across browsers", "export bookmarks to Google Sheets",
 "sync bookmarks between Chrome and Firefox", "Pocket alternative after shutdown",

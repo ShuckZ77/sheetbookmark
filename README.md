@@ -1,5 +1,12 @@
 # SheetBookmark — sync bookmarks across Chrome, Firefox & Edge into a Google Sheet you own
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome-Add%20to%20Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/sheetbookmark/fjadhifmdkopfimmeedolddpaihkfhdc"><img alt="Edge Add-ons" src="https://img.shields.io/badge/Edge-Get%20for%20Edge-0C88DA?style=for-the-badge&logo=microsoftedge&logoColor=white"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/"><img alt="Firefox Add-ons" src="https://img.shields.io/badge/Firefox-Add%20to%20Firefox-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white"></a>
+</p>
+
+
 **Bookmark normally. It lands in your own spreadsheet within seconds — from every browser, searchable in every browser. No server, no account, no tracking.**
 
 <p align="center">
@@ -23,8 +30,9 @@ Because you own it. Sort, filter, add columns, export, grep — your bookmarks a
 
 ## Get it
 
-- 🏬 **[Chrome Web Store](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh)** (works on Brave & Vivaldi too) · **[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/)** · Edge Add-ons — in review
-- 🔧 From source (2 min): clone → `npm run build` → load `dist/chrome` unpacked (or `dist/firefox` via `about:debugging`) → details in [guides/DEVELOPMENT.md](guides/DEVELOPMENT.md)
+**[▸ Chrome Web Store](https://chromewebstore.google.com/detail/fcbldfnjpjfapdpoejhfecaghgjaninh)**  ·  **[▸ Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/sheetbookmark/fjadhifmdkopfimmeedolddpaihkfhdc)**  ·  **[▸ Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/sheetbookmark/)**
+
+Free and open source. Also works on Brave & Vivaldi (install from the Chrome listing).
 
 ## How do I sync bookmarks between Chrome and Firefox?
 
